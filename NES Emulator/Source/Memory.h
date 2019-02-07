@@ -33,7 +33,20 @@ static const UInt16 MirrorLookup [5][4]{
     {0, 1, 2, 3},
 };
 
-
+union BMask8 {
+    struct {
+        Byte b0 : 1;
+        Byte b1 : 1;
+        Byte b2 : 1;
+        Byte b3 : 1;
+        Byte b4 : 1;
+        Byte b5 : 1;
+        Byte b6 : 1;
+        Byte b7 : 1;
+    };
+    Byte data;
+    
+};
 
 /*
  

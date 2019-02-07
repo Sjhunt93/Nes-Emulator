@@ -19,11 +19,30 @@ const int pixelHeight = 240;
 class Console;
 class PPU {
 public:
-    struct Sprite { //Each sprite contains 4 bytes
-        Byte yPosition;
-        Byte tileNum;
-        Byte attributes;
-        Byte xPos;
+    union Sprite { //Each sprite contains 4 bytes
+        struct {
+            Byte yPos;
+            Byte tileNum;
+            Byte attributes;
+            Byte xPos;
+        };
+        Byte access[4]; //allows quick access during oam read/write
+    };
+    enum eConsants {
+        eNumOfSprite = 64,
+        eNumOfScanLines = 262,
+        ePaletteSize = 32,
+        eNameTableSize = 2048,
+    };
+    enum eRegisters {
+        eControl = 0x2000,
+        eMask,
+        eStatus,
+        eOAMAddress, //0x2003
+        eOAMReadWrite,
+        eScroll,
+        ePPUReadWrite, //
+        eData,
     };
     
     
@@ -138,9 +157,11 @@ public:
 	uint64  Frame;// frame counter
     
 	// storage variables
-	Byte paletteData[32];
-	Byte nameTableData[2048];
-	Byte oamData[256];
+	Byte paletteData[ePaletteSize];
+	Byte nameTableData[eNameTableSize];
+    
+	Sprite oamData[eNumOfSprite];
+
     NesColour   front[pixelWidth][pixelHeight];
     NesColour   back[pixelWidth][pixelHeight];
 
@@ -148,8 +169,8 @@ public:
 //	back          *image.RGBA
     
 	// PPU registers
-	UInt16 v; // current vram address (15 bit)
-	UInt16 t; // temporary vram address (15 bit)
+	UInt16 vramAddress; // current vram address (15 bit)
+	UInt16 tempVramAddress; // temporary vram address (15 bit)
 	Byte x;   // fine x scroll (3 bit)
 	Byte w;   // write toggle (1 bit)
 	Byte f;   // even/odd frame flag (1 bit)

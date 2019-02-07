@@ -43,7 +43,7 @@ void PPU::print ()
 PPU::PPU (Console * _console) : memory(_console)
 {
     console = _console;
-    
+
     //ppu := PPU{Memory: NewPPUMemory(console), console: console}
     
     for (int i = 0; i < pixelWidth; i++) {
@@ -56,23 +56,23 @@ PPU::PPU (Console * _console) : memory(_console)
     Cycle = 0;
     ScanLine = 0;
     Frame = 0;
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < ePaletteSize; i++) {
         paletteData[i] = 0;
     }
-    for (int i = 0; i < 2048; i++) {
+    for (int i = 0; i < eNameTableSize; i++) {
         nameTableData[i] = 0;
     }
-    for (int i = 0; i < 256; i++) {
-        oamData[i] = 0;
+    for (int i = 0; i < eNumOfSprite; i++) {
+        oamData[i] = {0,0,0,0};
     }
     
-    v = t = 0;
+    vramAddress = tempVramAddress = 0;
     x = w = f = 0;
     _register = 0;
 
     nmiOccurred = nmiOutput = nmiPrevious = nmiDelay = 0;
     
-	nameTableByte = attributeTableByte =lowTileByte = highTileByte = 0;
+	nameTableByte = attributeTableByte = lowTileByte = highTileByte = 0;
 	tileData = 0;
     
 	// sprite temporary variables
@@ -139,13 +139,13 @@ void PPU::writePalette(UInt16 address, Byte value) {
 Byte PPU::readRegister( UInt16 address) {
     
     switch (address) {
-        case 0x2002:
+        case eRegisters::eStatus:
             return readStatus();
             break;
-        case 0x2004:
+        case eRegisters::eOAMReadWrite:
             return readOAMData();
             break;
-        case 0x2007:
+        case eRegisters::eData:
             return readData();
             break;
     }
@@ -153,29 +153,29 @@ Byte PPU::readRegister( UInt16 address) {
     
 }
 
-void PPU::writeRegister(UInt16  address, Byte value) {
+void PPU::writeRegister(UInt16 address, Byte value) {
     
     _register = value;
     switch (address) {
-        case 0x2000:
+        case eRegisters::eControl:
             writeControl(value);
             break;
-        case 0x2001:
+        case eRegisters::eMask:
             writeMask(value);
             break;
-        case 0x2003:
+        case eRegisters::eOAMAddress:
             writeOAMAddress(value);
             break;
-        case 0x2004:
+        case eRegisters::eOAMReadWrite:
             writeOAMData(value);
             break;
-        case 0x2005:
+        case eRegisters::eScroll:
             writeScroll(value);
             break;
-        case 0x2006:
+        case eRegisters::ePPUReadWrite:
             writeAddress(value);
             break;
-        case 0x2007:
+        case eRegisters::eData:
             writeData(value);
             break;
         case 0x4014:
@@ -205,7 +205,7 @@ void PPU::writeControl(Byte value) {
     // t: ....BA.. ........ = d: ......BA
     UInt16 value16 = value;
     // the bottom two bits are the nameTable
-    t = (t & 0xF3FF) | (( value16 & 0x03) << 10);
+    tempVramAddress = (tempVramAddress & 0xF3FF) | (( value16 & 0x03) << 10);
 	// t: ....BA.. ........ = d: ......BA
 }
 
@@ -245,17 +245,17 @@ void PPU::writeOAMAddress(Byte value) {
 
 // $2004: OAMDATA (read)
 Byte PPU::readOAMData() {
-        jassert(oamAddress <= 255);
-    return oamData[oamAddress];
+    const Byte sprite = oamAddress/4;
+    const Byte spriteData = oamAddress%4;
+    return oamData[sprite].access[spriteData];
 }
 
 // $2004: OAMDATA (write)
 void PPU::writeOAMData(Byte value) {
-    oamData[oamAddress] = value;
-        jassert(oamAddress != 255);
+    const Byte sprite = oamAddress/4;
+    const Byte spriteData = oamAddress%4;
+    oamData[sprite].access[spriteData] = value;
     oamAddress++;
-
-
 }
 
 // $2005: PPUSCROLL
@@ -266,14 +266,14 @@ void PPU::writeScroll(Byte value) {
         // t: ........ ...HGFED = d: HGFED...
         // x:               CBA = d: .....CBA
         // w:                   = 1
-        t = (t & 0xFFE0) | (value16 >> 3);
+        tempVramAddress = (tempVramAddress & 0xFFE0) | (value16 >> 3);
         x = value & 0x07;
         w = 1;
     } else {
         // t: .CBA..HG FED..... = d: HGFEDCBA
         // w:                   = 0
-        t = (t & 0x8FFF) | (( value16 & 0x07) << 12);
-        t = (t & 0xFC1F) | (( value16 & 0xF8) << 2);
+        tempVramAddress = (tempVramAddress & 0x8FFF) | (( value16 & 0x07) << 12);
+        tempVramAddress = (tempVramAddress & 0xFC1F) | (( value16 & 0xF8) << 2);
         w = 0;
     }
 }
@@ -284,45 +284,45 @@ void PPU::writeAddress(Byte value) {
         // t: ..FEDCBA ........ = d: ..FEDCBA
         // t: .X...... ........ = 0
         // w:                   = 1
-        t = (t & 0x80FF) | ((( (UInt16)  value) & 0x3F) << 8);
+        tempVramAddress = (tempVramAddress & 0x80FF) | ((( (UInt16)  value) & 0x3F) << 8);
         w = 1;
     } else {
         // t: ........ HGFEDCBA = d: HGFEDCBA
         // v                    = t
         // w:                   = 0
-        t = (t & 0xFF00) | ( (UInt16)  value);
-        v = t;
+        tempVramAddress = (tempVramAddress & 0xFF00) | ( (UInt16)  value);
+        vramAddress = tempVramAddress;
         w = 0;
     }
 }
 // $2007: PPUDATA (read)
 Byte  PPU::readData ()
 {
-    Byte value = memory.read(v);
+    Byte value = memory.read(vramAddress);
     // emulate buffered reads
-    if (v%0x4000 < 0x3F00) {
+    if (vramAddress%0x4000 < 0x3F00) {
         Byte buffered = bufferedData;
         bufferedData = value;
         value = buffered;
     } else {
-        bufferedData = memory.read(v - 0x1000);
+        bufferedData = memory.read(vramAddress - 0x1000);
     }
     // increment address
     if (flagIncrement == 0) {
-        v += 1;
+        vramAddress += 1;
     } else {
-        v += 32;
+        vramAddress += 32;
     }
     return value;
 }
 
 // $2007: PPUDATA (write)
 void PPU::writeData(Byte value) {
-    memory.write(v, value);
+    memory.write(vramAddress, value);
     if (flagIncrement == 0) {
-        v += 1;
+        vramAddress += 1;
     } else {
-        v += 32;
+        vramAddress += 32;
     }
 }
 
@@ -332,8 +332,7 @@ void PPU::writeDMA(Byte value) {
     UInt16 value16 = value;
     UInt16 address = value16 << 8;
     for (int i = 0; i < 256; i++) {
-//        oamData[oamAddress] = console->cpu.memory.read(address);
-        oamData[oamAddress] = console->cpu.memory.read(address);
+        oamData[i/4].access[i%4] = console->cpu.memory.read(address);
 #warning FIX HERE
         oamAddress++;
         address++;
@@ -348,33 +347,33 @@ void PPU::writeDMA(Byte value) {
 void PPU::incrementX() {
     // increment hori(v)
     // if coarse X == 31
-    if ((v&0x001F) == 31) {
+    if ((vramAddress&0x001F) == 31) {
         // coarse X = 0
-        v &= 0xFFE0;
+        vramAddress &= 0xFFE0;
         // switch horizontal nametable
-        v ^= 0x0400;
+        vramAddress ^= 0x0400;
     } else {
         // increment coarse X
-        v++;
+        vramAddress++;
     }
 }
 
 void PPU::incrementY() {
     // increment vert(v)
     // if fine Y < 7
-    if ((v&0x7000) != 0x7000) {
+    if ((vramAddress&0x7000) != 0x7000) {
         // increment fine Y
-        v += 0x1000;
+        vramAddress += 0x1000;
     } else {
         // fine Y = 0
-        v &= 0x8FFF;
+        vramAddress &= 0x8FFF;
         // let y = coarse Y
-        int y = (v & 0x03E0) >> 5;
+        int y = (vramAddress & 0x03E0) >> 5;
         if (y == 29) {
             // coarse Y = 0
             y = 0;
             // switch vertical nametable
-            v ^= 0x0800;
+            vramAddress ^= 0x0800;
         } else if (y == 31) {
             // coarse Y = 0, nametable not switched
             y = 0;
@@ -383,7 +382,7 @@ void PPU::incrementY() {
             y++;
         }
         // put coarse Y back into v
-        v = (v & 0xFC1F) | (y << 5);
+        vramAddress = (vramAddress & 0xFC1F) | (y << 5);
     }
 }
 
@@ -392,14 +391,14 @@ void PPU::copyX() {
     // v: .....F.. ...EDCBA = t: .....F.. ...EDCBA
 //    v = (v & 0xFBE0) | (t & 0x041F);
 
-    v = (v & 0xFBE0) | (t & 0x041F);
+    vramAddress = (vramAddress & 0xFBE0) | (tempVramAddress & 0x041F);
 
 }
 
 void PPU::copyY() {
     // vert(v) = vert(t)
     // v: .IHGF.ED CBA..... = t: .IHGF.ED CBA.....
-    v = (v & 0x841F) | (t & 0x7BE0);
+    vramAddress = (vramAddress & 0x841F) | (tempVramAddress & 0x7BE0);
 }
 
 void PPU::nmiChange() {
@@ -440,20 +439,20 @@ void PPU::clearVerticalBlank() {
 }
 
 void PPU::fetchNameTableByte() {
-    UInt16 localV = v;
+    UInt16 localV = vramAddress;
     UInt16 address = 0x2000 | (localV & 0x0FFF);
     nameTableByte = memory.read(address);
 }
 
 void PPU::fetchAttributeTableByte() {
     //im not sure why there is a copy here...
-    UInt16 localV = v;
+    UInt16 localV = vramAddress;
     UInt16 address = 0x23C0 | (localV & 0x0C00) | ((localV >> 4) & 0x38) | ((localV >> 2) & 0x07);
     UInt16 shift = ((localV >> 4) & 4) | (localV & 2);
     attributeTableByte = ((memory.read(address) >> shift) & 3) << 2;
 }
 void PPU::fetchLowTileByte() {
-    UInt16 fineY = (v >> 12) & 7;
+    UInt16 fineY = (vramAddress >> 12) & 7;
     UInt16 table = flagBackgroundTable;
     UInt16 tile = nameTableByte;
     UInt16 address = (0x1000*table) + tile*16 + fineY;
@@ -461,7 +460,7 @@ void PPU::fetchLowTileByte() {
 }
 
 void PPU::fetchHighTileByte() {
-    UInt16 fineY = (v >> 12) & 7;
+    UInt16 fineY = (vramAddress >> 12) & 7;
     UInt16 table = flagBackgroundTable;
     UInt16 tile = nameTableByte;
     UInt16 address = 0x1000*table + tile*16 + fineY;
@@ -595,8 +594,8 @@ void PPU::renderPixel() {
 
 UInt32 PPU::fetchSpritePattern(int i, int row ) {
 
-    UInt16 tile = oamData[i*4+1];
-    UInt16 attributes = oamData[i*4+2];
+    UInt16 tile = oamData[i].tileNum;
+    UInt16 attributes = oamData[i].attributes;
     UInt16 address = 0;
     if (flagSpriteSize == 0) {
         if ((attributes&0x80) == 0x80) {
@@ -657,10 +656,10 @@ void PPU::evaluateSprites() {
         h = 16;
     }
     int count = 0;
-    for (int i = 0; i < 64; i++) {
-        Byte y = oamData[i*4+0];
-        Byte a = oamData[i*4+2];
-        Byte x = oamData[i*4+3];
+    for (int i = 0; i < eNumOfSprite; i++) {
+        Byte y = oamData[i].yPos;
+        Byte a = oamData[i].attributes;
+        Byte x = oamData[i].xPos;
         int row = ScanLine - ((int) y);
         if (row < 0 || row >= h) {
             continue;
@@ -695,7 +694,7 @@ void PPU::tick() {
 //    }
     
     if (flagShowBackground != 0 || flagShowSprites != 0) {
-        if (f == 1 && ScanLine == 261 && Cycle == 339) {
+        if (f == 1 && ScanLine == eNumOfScanLines-1 && Cycle == 339) {
             Cycle = 0;
             ScanLine = 0;
             Frame++;
