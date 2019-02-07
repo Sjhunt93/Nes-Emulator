@@ -10,7 +10,7 @@
 #define __NES_Emulator_Go_Port__cpu__
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "memory.h"
+#include "Memory.h"
 
 static const int CPUFrequency = 1789773;
 

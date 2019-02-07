@@ -18,10 +18,15 @@ const int pixelHeight = 240;
 
 class Console;
 class PPU {
-    
-
-    
 public:
+    struct Sprite { //Each sprite contains 4 bytes
+        Byte yPosition;
+        Byte tileNum;
+        Byte attributes;
+        Byte xPos;
+    };
+    
+    
     PPU (Console * _console);
     void reset();
     
@@ -36,9 +41,8 @@ public:
     
     
     
-    // $2000: PPUCTRL
+    // $2000: PPUCTRL bit masked values
     void writeControl(Byte value);
-    
     // $2001: PPUMASK
     void writeMask(Byte value);
     
@@ -49,11 +53,12 @@ public:
     // $2003: OAMADDR
     void writeOAMAddress(Byte value);
     
+    // $2004: OAMDATA (write)
+    void writeOAMData(Byte value);
     // $2004: OAMDATA (read)
     Byte readOAMData();
     
-    // $2004: OAMDATA (write)
-    void writeOAMData(Byte value);
+
 
     
     // $2005: PPUSCROLL
@@ -124,8 +129,8 @@ public:
 
     
     
-        ppuMemory memory;
-//	Memory           // memory interface
+    ppuMemory memory;
+
 	Console *console; // reference to parent object
     
 	int     Cycle;// 0-340

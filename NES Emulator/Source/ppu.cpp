@@ -197,11 +197,14 @@ void PPU::writeControl(Byte value) {
     flagBackgroundTable = (value >> 4) & 1;
     flagSpriteSize = (value >> 5) & 1;
     flagMasterSlave = (value >> 6) & 1;
+    
     nmiOutput = ((value>>7)&1) == 1;
-//    jassert(nmiOutput == 1);
+    
+    //see if NMI needs to happen
     nmiChange();
     // t: ....BA.. ........ = d: ......BA
     UInt16 value16 = value;
+    // the bottom two bits are the nameTable
     t = (t & 0xF3FF) | (( value16 & 0x03) << 10);
 	// t: ....BA.. ........ = d: ......BA
 }

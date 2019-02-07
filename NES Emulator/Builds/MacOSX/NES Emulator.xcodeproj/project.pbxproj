@@ -62,7 +62,7 @@
 		47FF1034220CB99300D98940 /* apu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = apu.h; path = ../../Source/apu.h; sourceTree = "<group>"; };
 		47FF1035220CB99300D98940 /* Mapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mapper.h; path = ../../Source/Mapper.h; sourceTree = "<group>"; };
 		47FF1036220CB99300D98940 /* Memory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Memory.cpp; path = ../../Source/Memory.cpp; sourceTree = "<group>"; };
-		47FF1037220CB99300D98940 /* memory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = memory.h; path = ../../Source/memory.h; sourceTree = "<group>"; };
+		47FF1037220CB99300D98940 /* Memory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Memory.h; path = ../../Source/Memory.h; sourceTree = "<group>"; };
 		47FF1038220CB99300D98940 /* cartridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cartridge.h; path = ../../Source/cartridge.h; sourceTree = "<group>"; };
 		47FF1039220CB99300D98940 /* apu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = apu.cpp; path = ../../Source/apu.cpp; sourceTree = "<group>"; };
 		47FF103A220CB99300D98940 /* console.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = console.h; path = ../../Source/console.h; sourceTree = "<group>"; };
@@ -206,7 +206,7 @@
 				47FF1044220CB99400D98940 /* Mapper.cpp */,
 				47FF1035220CB99300D98940 /* Mapper.h */,
 				47FF1036220CB99300D98940 /* Memory.cpp */,
-				47FF1037220CB99300D98940 /* memory.h */,
+				47FF1037220CB99300D98940 /* Memory.h */,
 				47FF103E220CB99400D98940 /* palette.h */,
 				47FF103C220CB99300D98940 /* ppu.cpp */,
 				47FF103F220CB99400D98940 /* ppu.h */,
