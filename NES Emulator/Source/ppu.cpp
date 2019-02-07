@@ -66,7 +66,8 @@ PPU::PPU (Console * _console) : memory(_console)
         oamData[i] = {0,0,0,0};
     }
     
-    vramAddress = tempVramAddress = 0;
+//    vramAddress = tempAddress = {0,0,0,0};
+    
     x = w = f = 0;
     _register = 0;
 
@@ -205,7 +206,8 @@ void PPU::writeControl(Byte value) {
     // t: ....BA.. ........ = d: ......BA
     UInt16 value16 = value;
     // the bottom two bits are the nameTable
-    tempVramAddress = (tempVramAddress & 0xF3FF) | (( value16 & 0x03) << 10);
+    
+    tempAddress.setRaw((tempAddress.getRaw() & 0xF3FF) | (( value16 & 0x03) << 10));
 	// t: ....BA.. ........ = d: ......BA
 }
 
@@ -266,14 +268,14 @@ void PPU::writeScroll(Byte value) {
         // t: ........ ...HGFED = d: HGFED...
         // x:               CBA = d: .....CBA
         // w:                   = 1
-        tempVramAddress = (tempVramAddress & 0xFFE0) | (value16 >> 3);
+        tempAddress.setRaw((tempAddress.getRaw() & 0xFFE0) | (value16 >> 3));
         x = value & 0x07;
         w = 1;
     } else {
         // t: .CBA..HG FED..... = d: HGFEDCBA
         // w:                   = 0
-        tempVramAddress = (tempVramAddress & 0x8FFF) | (( value16 & 0x07) << 12);
-        tempVramAddress = (tempVramAddress & 0xFC1F) | (( value16 & 0xF8) << 2);
+        tempAddress.setRaw((tempAddress.getRaw() & 0x8FFF) | (( value16 & 0x07) << 12));
+        tempAddress.setRaw((tempAddress.getRaw() & 0xFC1F) | (( value16 & 0xF8) << 2));
         w = 0;
     }
 }
@@ -284,45 +286,45 @@ void PPU::writeAddress(Byte value) {
         // t: ..FEDCBA ........ = d: ..FEDCBA
         // t: .X...... ........ = 0
         // w:                   = 1
-        tempVramAddress = (tempVramAddress & 0x80FF) | ((( (UInt16)  value) & 0x3F) << 8);
+        tempAddress.setRaw((tempAddress.getRaw() & 0x80FF) | ((( (UInt16)  value) & 0x3F) << 8));
         w = 1;
     } else {
         // t: ........ HGFEDCBA = d: HGFEDCBA
         // v                    = t
         // w:                   = 0
-        tempVramAddress = (tempVramAddress & 0xFF00) | ( (UInt16)  value);
-        vramAddress = tempVramAddress;
+        tempAddress.setRaw((tempAddress.getRaw() & 0xFF00) | ( (UInt16)  value));
+        vramAddress = tempAddress;
         w = 0;
     }
 }
 // $2007: PPUDATA (read)
 Byte  PPU::readData ()
 {
-    Byte value = memory.read(vramAddress);
+    Byte value = memory.read(vramAddress.getRaw());
     // emulate buffered reads
-    if (vramAddress%0x4000 < 0x3F00) {
+    if (vramAddress.getRaw()%0x4000 < 0x3F00) {
         Byte buffered = bufferedData;
         bufferedData = value;
         value = buffered;
     } else {
-        bufferedData = memory.read(vramAddress - 0x1000);
+        bufferedData = memory.read(vramAddress.getRaw() - 0x1000);
     }
     // increment address
     if (flagIncrement == 0) {
-        vramAddress += 1;
+        vramAddress.setRaw(vramAddress.getRaw() + 1);
     } else {
-        vramAddress += 32;
+        vramAddress.setRaw(vramAddress.getRaw() + 32);
     }
     return value;
 }
 
 // $2007: PPUDATA (write)
 void PPU::writeData(Byte value) {
-    memory.write(vramAddress, value);
+    memory.write(vramAddress.getRaw(), value);
     if (flagIncrement == 0) {
-        vramAddress += 1;
+        vramAddress.setRaw(vramAddress.getRaw() + 1);
     } else {
-        vramAddress += 32;
+        vramAddress.setRaw(vramAddress.getRaw() + 32);
     }
 }
 
@@ -347,33 +349,48 @@ void PPU::writeDMA(Byte value) {
 void PPU::incrementX() {
     // increment hori(v)
     // if coarse X == 31
-    if ((vramAddress&0x001F) == 31) {
+#if 1
+    if ((vramAddress.xCoarseScroll) == 31) {
         // coarse X = 0
-        vramAddress &= 0xFFE0;
+        vramAddress.xCoarseScroll = 0;
         // switch horizontal nametable
-        vramAddress ^= 0x0400;
+        vramAddress.nameTableSelect ^= 0x1;
+//        vramAddress.setRaw(vramAddress.x ^ 0x0400);
     } else {
         // increment coarse X
-        vramAddress++;
+        vramAddress.xCoarseScroll++;
     }
+#endif
+
+    
+//    if ((vramAddress.getRaw() & 0x001F) == 31) {
+//        vramAddress.setRaw(vramAddress.getRaw() & 0xFFE0);
+//
+//        vramAddress.setRaw(vramAddress.getRaw() ^ 0x0400);
+//
+//    }
+//    else {
+//        vramAddress.setRaw(vramAddress.getRaw() + 1);
+//    }
 }
 
 void PPU::incrementY() {
     // increment vert(v)
     // if fine Y < 7
-    if ((vramAddress&0x7000) != 0x7000) {
+    if ((vramAddress.getRaw()&0x7000) != 0x7000) {
         // increment fine Y
-        vramAddress += 0x1000;
+        vramAddress.setRaw(vramAddress.getRaw() + 0x1000);// += 0x1000;
     } else {
         // fine Y = 0
-        vramAddress &= 0x8FFF;
+        vramAddress.setRaw(vramAddress.getRaw() & 0x8FFF);// += 0x1000;
         // let y = coarse Y
-        int y = (vramAddress & 0x03E0) >> 5;
+        int y = (vramAddress.getRaw() & 0x03E0) >> 5;
         if (y == 29) {
             // coarse Y = 0
             y = 0;
             // switch vertical nametable
-            vramAddress ^= 0x0800;
+            vramAddress.setRaw(vramAddress.getRaw() ^ 0x0800);
+
         } else if (y == 31) {
             // coarse Y = 0, nametable not switched
             y = 0;
@@ -382,7 +399,7 @@ void PPU::incrementY() {
             y++;
         }
         // put coarse Y back into v
-        vramAddress = (vramAddress & 0xFC1F) | (y << 5);
+        vramAddress.setRaw((vramAddress.getRaw() & 0xFC1F) | (y << 5));
     }
 }
 
@@ -391,14 +408,14 @@ void PPU::copyX() {
     // v: .....F.. ...EDCBA = t: .....F.. ...EDCBA
 //    v = (v & 0xFBE0) | (t & 0x041F);
 
-    vramAddress = (vramAddress & 0xFBE0) | (tempVramAddress & 0x041F);
+    vramAddress.setRaw((vramAddress.getRaw() & 0xFBE0) | (tempAddress.getRaw() & 0x041F));
 
 }
 
 void PPU::copyY() {
     // vert(v) = vert(t)
     // v: .IHGF.ED CBA..... = t: .IHGF.ED CBA.....
-    vramAddress = (vramAddress & 0x841F) | (tempVramAddress & 0x7BE0);
+    vramAddress.setRaw((vramAddress.getRaw() & 0x841F) | (tempAddress.getRaw() & 0x7BE0));
 }
 
 void PPU::nmiChange() {
@@ -439,20 +456,20 @@ void PPU::clearVerticalBlank() {
 }
 
 void PPU::fetchNameTableByte() {
-    UInt16 localV = vramAddress;
+    UInt16 localV = vramAddress.getRaw();
     UInt16 address = 0x2000 | (localV & 0x0FFF);
     nameTableByte = memory.read(address);
 }
 
 void PPU::fetchAttributeTableByte() {
     //im not sure why there is a copy here...
-    UInt16 localV = vramAddress;
+    UInt16 localV = vramAddress.getRaw();
     UInt16 address = 0x23C0 | (localV & 0x0C00) | ((localV >> 4) & 0x38) | ((localV >> 2) & 0x07);
     UInt16 shift = ((localV >> 4) & 4) | (localV & 2);
     attributeTableByte = ((memory.read(address) >> shift) & 3) << 2;
 }
 void PPU::fetchLowTileByte() {
-    UInt16 fineY = (vramAddress >> 12) & 7;
+    UInt16 fineY = (vramAddress.getRaw() >> 12) & 7;
     UInt16 table = flagBackgroundTable;
     UInt16 tile = nameTableByte;
     UInt16 address = (0x1000*table) + tile*16 + fineY;
@@ -460,7 +477,7 @@ void PPU::fetchLowTileByte() {
 }
 
 void PPU::fetchHighTileByte() {
-    UInt16 fineY = (vramAddress >> 12) & 7;
+    UInt16 fineY = (vramAddress.getRaw() >> 12) & 7;
     UInt16 table = flagBackgroundTable;
     UInt16 tile = nameTableByte;
     UInt16 address = 0x1000*table + tile*16 + fineY;

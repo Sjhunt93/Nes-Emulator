@@ -28,6 +28,56 @@ public:
         };
         Byte access[4]; //allows quick access during oam read/write
     };
+    struct VRamAddress {
+//        struct {
+//            Byte xCoarseScroll : 5;
+//            Byte yCoarseScroll : 5;
+//            Byte nameTableSelect : 2;
+//            Byte yFineScroll : 4;
+////            Byte unused : 1; //top bit is unused
+//
+//        };
+//        UInt16 rawData;
+#if 1
+        Byte xCoarseScroll : 5;
+        Byte yCoarseScroll : 5;
+        Byte nameTableSelect : 2;
+        Byte yFineScroll : 3;
+
+//        Byte xCoarseScroll;//
+//        Byte yCoarseScroll;
+//        Byte nameTableSelect;
+//        Byte yFineScroll;
+        
+        uint16 getRaw ()
+        {
+//            uint16 toGoBack = xCoarseScroll;
+//            toGoBack |= (yCoarseScroll << 5);
+//            toGoBack |= (nameTableSelect << 10);
+//            toGoBack |= (yFineScroll << 12);
+//            return toGoBack;
+            return xCoarseScroll | (yCoarseScroll << 5) | (nameTableSelect << 10) | (yFineScroll << 12);
+        }
+        void setRaw (uint16 raw)
+        {
+            xCoarseScroll = raw & 0x1F;
+            yCoarseScroll = (raw >> 5) & 0x1F;
+            nameTableSelect = (raw >> 10) & 0x3;
+            yFineScroll = (raw >> 12) & 0x7;
+        }
+#else
+        uint16 getRaw ()
+        {
+            return data;
+        }
+        void setRaw (uint16 raw)
+        {
+            data = raw;
+        }
+        uint16 data = 0;
+#endif
+        
+    };
     enum eConsants {
         eNumOfSprite = 64,
         eNumOfScanLines = 262,
@@ -169,8 +219,8 @@ public:
 //	back          *image.RGBA
     
 	// PPU registers
-	UInt16 vramAddress; // current vram address (15 bit)
-	UInt16 tempVramAddress; // temporary vram address (15 bit)
+	VRamAddress vramAddress; // current vram address (15 bit)
+	VRamAddress tempAddress; // temporary vram address (15 bit)
 	Byte x;   // fine x scroll (3 bit)
 	Byte w;   // write toggle (1 bit)
 	Byte f;   // even/odd frame flag (1 bit)
