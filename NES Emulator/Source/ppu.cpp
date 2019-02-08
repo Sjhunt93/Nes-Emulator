@@ -377,29 +377,29 @@ void PPU::incrementX() {
 void PPU::incrementY() {
     // increment vert(v)
     // if fine Y < 7
-    if ((vramAddress.getRaw()&0x7000) != 0x7000) {
+    if ((vramAddress.yFineScroll) != 7) {
         // increment fine Y
-        vramAddress.setRaw(vramAddress.getRaw() + 0x1000);// += 0x1000;
+        vramAddress.yFineScroll++;
     } else {
         // fine Y = 0
-        vramAddress.setRaw(vramAddress.getRaw() & 0x8FFF);// += 0x1000;
+        vramAddress.yFineScroll = 0;
+
         // let y = coarse Y
-        int y = (vramAddress.getRaw() & 0x03E0) >> 5;
+        const int y = vramAddress.yCoarseScroll;
         if (y == 29) {
             // coarse Y = 0
-            y = 0;
+            vramAddress.yCoarseScroll = 0;
             // switch vertical nametable
-            vramAddress.setRaw(vramAddress.getRaw() ^ 0x0800);
+            vramAddress.nameTableSelect ^= 0x2;
 
         } else if (y == 31) {
             // coarse Y = 0, nametable not switched
-            y = 0;
+            vramAddress.yCoarseScroll = 0;
         } else {
             // increment coarse Y
-            y++;
+            vramAddress.yCoarseScroll++;
         }
         // put coarse Y back into v
-        vramAddress.setRaw((vramAddress.getRaw() & 0xFC1F) | (y << 5));
     }
 }
 
