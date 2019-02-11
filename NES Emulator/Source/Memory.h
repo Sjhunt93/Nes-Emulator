@@ -48,6 +48,10 @@ union BMask8 {
     
 };
 
+struct PatternTable {
+    Byte data[8][8];
+};
+
 /*
  
  type Memory interface {
@@ -90,7 +94,33 @@ public:
     Byte read (UInt16 address);
     void write (UInt16 address, Byte data);
     
+    static bool checkBit (Byte input, Byte bit)
+    {
+        Byte flag = 1 << bit;
+        return (input & flag);
+    }
+    void makePallette () {
+        patterns.clear();
+        for (int index = 0; index < 0x2000; ) {
+            
+            PatternTable pTable;
+
+            for (int y = 0; y < 8; y++) {
+                Byte rowA = read(index);
+                Byte rowB = read(index+8);
+                for (int x = 0; x < 8; x++) {
+                    int a = checkBit(rowA, x);
+                    int b = checkBit(rowB, x);
+                    pTable.data[x][y] = a+(b<<1);
+                }
+                index++;
+            }
+            patterns.push_back(pTable);
+        }
+    }
     
+    std::vector<PatternTable> patterns;
+
     
 private:
     Console * console;

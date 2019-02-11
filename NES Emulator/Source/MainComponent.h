@@ -18,7 +18,18 @@
  This component lives inside our window, and this is where you should put all
  your controls and content.
  */
-class MainComponent   : public Component, public Thread, public KeyListener
+
+
+class NameTableView : public Component
+{
+    
+    void paint (Graphics & g)
+    {
+        
+    }
+};
+
+class MainComponent   : public Component, public Thread, public KeyListener, public Timer
 {
 public:
     //==============================================================================
@@ -35,6 +46,9 @@ public:
                      Component* originatingComponent);
     
     bool keyStateChanged (bool isKeyDown, Component* originatingComponent);
+    
+    void timerCallback();
+
     
     File f;
     Console NES;

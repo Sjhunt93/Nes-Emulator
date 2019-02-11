@@ -68,7 +68,7 @@ PPU::PPU (Console * _console) : memory(_console)
     
 //    vramAddress = tempAddress = {0,0,0,0};
     
-    x = w = f = 0;
+    x = writeToggle = f = 0;
     _register = 0;
 
     nmiOccurred = nmiOutput = nmiPrevious = nmiDelay = 0;
@@ -234,7 +234,7 @@ Byte PPU::readStatus() {
     nmiOccurred = false;
     nmiChange();
     // w:                   = 0
-    w = 0;
+    writeToggle = 0;
     return result;
     
     
@@ -264,45 +264,61 @@ void PPU::writeOAMData(Byte value) {
 void PPU::writeScroll(Byte value) {
     UInt16 value16 = value;
 
-    if (w == 0) {
+    if (writeToggle == 0) {
         // t: ........ ...HGFED = d: HGFED...
         // x:               CBA = d: .....CBA
         // w:                   = 1
         tempAddress.setRaw((tempAddress.getRaw() & 0xFFE0) | (value16 >> 3));
         x = value & 0x07;
-        w = 1;
+        writeToggle = 1;
     } else {
         // t: .CBA..HG FED..... = d: HGFEDCBA
         // w:                   = 0
         tempAddress.setRaw((tempAddress.getRaw() & 0x8FFF) | (( value16 & 0x07) << 12));
         tempAddress.setRaw((tempAddress.getRaw() & 0xFC1F) | (( value16 & 0xF8) << 2));
-        w = 0;
+        writeToggle = 0;
     }
 }
 
 // $2006: PPUADDR
-void PPU::writeAddress(Byte value) {
-    if (w == 0) {
-        // t: ..FEDCBA ........ = d: ..FEDCBA
-        // t: .X...... ........ = 0
-        // w:                   = 1
-        tempAddress.setRaw((tempAddress.getRaw() & 0x80FF) | ((( (UInt16)  value) & 0x3F) << 8));
-        w = 1;
-    } else {
-        // t: ........ HGFEDCBA = d: HGFEDCBA
-        // v                    = t
-        // w:                   = 0
-        tempAddress.setRaw((tempAddress.getRaw() & 0xFF00) | ( (UInt16)  value));
+void PPU::writeAddress(Byte value)
+{
+    if (writeToggle == 0) {  // sets the top 8 bits.
+
+
+        
+        // this is the bottom 2 bits of value mapped to the upper 2 bits of yCorase scroll
+        tempAddress.yCoarseScroll = (tempAddress.yCoarseScroll & 0x7) | ((value & 0x3) << 3);
+        
+        //next 2 bits are simply set to name table select
+        tempAddress.nameTableSelect = (value & 0xC) >> 2;
+        
+        // last 3 bits make up the y fine scroll
+        tempAddress.yFineScroll = (value & 0x70) >> 4;
+        
+        // if you prefer you can also do this with on line to set all 8 bits.
+//        tempAddress.setRaw((tempAddress.getRaw() & 0x80FF) | ((( (UInt16)  value) & 0x3F) << 8));
+        writeToggle = 1;
+    }
+    else { // sets the bottom 8 bits
+        
+        // bottom 5 bits of value are just coarse x scroll
+        tempAddress.xCoarseScroll = value & 0x1F;
+        
+        //next 3 bits are the lower 3 bits of y coarse scroll so a little fidily to set
+        tempAddress.yCoarseScroll = (tempAddress.yCoarseScroll & 0x18)  |  ((value & 0xE0) >> 5);
+        
+//        tempAddress.setRaw((tempAddress.getRaw() & 0xFF00) | ( (UInt16)  value));
         vramAddress = tempAddress;
-        w = 0;
+        writeToggle = 0;
     }
 }
 // $2007: PPUDATA (read)
 Byte  PPU::readData ()
 {
     Byte value = memory.read(vramAddress.getRaw());
-    // emulate buffered reads
-    if (vramAddress.getRaw()%0x4000 < 0x3F00) {
+    
+    if (vramAddress.getRaw()%0x4000 < 0x3F00) { //this is an odd one..
         Byte buffered = bufferedData;
         bufferedData = value;
         value = buffered;
@@ -347,31 +363,16 @@ void PPU::writeDMA(Byte value) {
 
 
 void PPU::incrementX() {
-    // increment hori(v)
-    // if coarse X == 31
-#if 1
+
+
     if ((vramAddress.xCoarseScroll) == 31) {
-        // coarse X = 0
         vramAddress.xCoarseScroll = 0;
         // switch horizontal nametable
         vramAddress.nameTableSelect ^= 0x1;
-//        vramAddress.setRaw(vramAddress.x ^ 0x0400);
     } else {
-        // increment coarse X
         vramAddress.xCoarseScroll++;
     }
-#endif
-
     
-//    if ((vramAddress.getRaw() & 0x001F) == 31) {
-//        vramAddress.setRaw(vramAddress.getRaw() & 0xFFE0);
-//
-//        vramAddress.setRaw(vramAddress.getRaw() ^ 0x0400);
-//
-//    }
-//    else {
-//        vramAddress.setRaw(vramAddress.getRaw() + 1);
-//    }
 }
 
 void PPU::incrementY() {
@@ -428,13 +429,6 @@ void PPU::nmiChange() {
     nmiPrevious = nmi;
 }
 void PPU::setVerticalBlank() {
-//    for (int i = 0; i < pixelWidth; i++) {
-//        for (int j = 0; j < pixelHeight; j++) {
-//            NesColour swap = front[i][j];
-//            front[i][j] = back[i][j];
-//            back[i][j] = swap;
-//        }
-//    }
     
     for (int x = 0; x < pixelWidth; x++) {
         for (int y = 0; y < pixelHeight; y++) {
@@ -456,35 +450,37 @@ void PPU::clearVerticalBlank() {
 }
 
 void PPU::fetchNameTableByte() {
-    UInt16 localV = vramAddress.getRaw();
-    UInt16 address = 0x2000 | (localV & 0x0FFF);
+    //bottom 12 bits
+    const UInt16 address = 0x2000 | (vramAddress.getRaw() & 0x0FFF);
     nameTableByte = memory.read(address);
 }
 
 void PPU::fetchAttributeTableByte() {
-    //im not sure why there is a copy here...
+    // I have no idea what is going in here...
     UInt16 localV = vramAddress.getRaw();
-    UInt16 address = 0x23C0 | (localV & 0x0C00) | ((localV >> 4) & 0x38) | ((localV >> 2) & 0x07);
+    UInt16 address = 0x23C0;
+    address |= (localV & 0x0C00) | ((localV >> 4) & 0x38);
+    address |= vramAddress.xCoarseScroll >> 2; // top 3 bits of xcoarse scroll
     UInt16 shift = ((localV >> 4) & 4) | (localV & 2);
     attributeTableByte = ((memory.read(address) >> shift) & 3) << 2;
 }
 void PPU::fetchLowTileByte() {
-    UInt16 fineY = (vramAddress.getRaw() >> 12) & 7;
+    UInt16 fineY = vramAddress.yFineScroll;
     UInt16 table = flagBackgroundTable;
-    UInt16 tile = nameTableByte;
-    UInt16 address = (0x1000*table) + tile*16 + fineY;
+    UInt16 tile = nameTableByte; //unsure on why we multiply the tile by 16...
+    UInt16 address = (0x1000 * table) + tile * 16 + fineY;
     lowTileByte = memory.read(address);
 }
 
 void PPU::fetchHighTileByte() {
-    UInt16 fineY = (vramAddress.getRaw() >> 12) & 7;
+    UInt16 fineY = vramAddress.yFineScroll;
     UInt16 table = flagBackgroundTable;
     UInt16 tile = nameTableByte;
-    UInt16 address = 0x1000*table + tile*16 + fineY;
+    UInt16 address = 0x1000 * table + tile * 16 + fineY;
     highTileByte = memory.read(address + 8);
 }
 
-
+//puts the two reads together..
 void PPU::storeTileData() {
     UInt32 data = 0;
     for (int i = 0; i < 8; i++) {
@@ -501,7 +497,7 @@ void PPU::storeTileData() {
         */
         
         data = data << 4;
-        data = data | (a | p1 | p2);
+        data |=  (a | p1 | p2);
     }
     tileData = tileData | data;
 }
@@ -544,47 +540,46 @@ PPU::SpritePixel PPU::spritePixel() {
     return {0, 0};
 }
 void PPU::renderPixel() {
-    int xl = Cycle - 1;
-    jassert(xl < pixelWidth);
-    int yl = ScanLine;
+    
+    const int xl = Cycle - 1;
+    const int yl = ScanLine;
     int background = backgroundPixel();
 
-    
+    //Get the sprite data.
     SpritePixel spirtePix = spritePixel();
 
     
-    if (xl < 8 && flagShowLeftBackground == 0) {
+    if (xl < ePixelMaskLeft && flagShowLeftBackground == 0) { //hide the left x pixels
         background = 0;
     }
-    if (xl < 8 && flagShowLeftSprites == 0) {
+    if (xl < ePixelMaskLeft && flagShowLeftSprites == 0) { //same as above..
         spirtePix.i = 0;
     }
-    Byte b = (background%4) != 0;
-    Byte s = (spirtePix.i%4  ) != 0;
+    const bool b = (background%4) != 0;
+    const bool s = (spirtePix.i%4) != 0;
     Byte color;
     if (!b && !s) {
         color = 0;
     }
     else if (!b && s) {
         color = spirtePix.i | 0x10;
-        if (disableSprites) {
-            color = disableTileMap ? 0 : background;
+        if (disableSprites) { //These have been added for debug purposes..
+            color = disableTileMap ? 0 : background; // if the
         }
     }
     else if (b && !s) {
         color = background;
-        if (disableTileMap) {
+        if (disableTileMap) { //added for debugging purpose
             color = 0;
         }
     }
     else {
-
         if (spriteIndexes[spirtePix.colour] == 0 && xl < 255) {
             flagSpriteZeroHit = 1;
         }
         if (spritePriorities[spirtePix.colour] == 0) {
             color = spirtePix.i | 0x10;
-            if (disableSprites) {
+            if (disableSprites) { //These have been added for debug purposes..
                 color = disableTileMap ? 0 : background;
             }
         }
@@ -805,5 +800,15 @@ void PPU::Step() {
         clearVerticalBlank();
         flagSpriteZeroHit = 0;
         flagSpriteOverflow = 0;
+    }
+}
+
+void PPU::fillDebugScreenBuffer (PPU::FullScreenDebug * buffer)
+{
+    for (int x = 0; x < pixelWidth*2; x++) {
+        for (int y = 0; y < pixelHeight*2; y++) {
+            int background = backgroundPixel();
+
+        }
     }
 }

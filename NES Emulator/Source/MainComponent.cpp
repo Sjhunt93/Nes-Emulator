@@ -13,7 +13,7 @@
 
 
 MainComponent::MainComponent() : Thread("nes"), NES(f) {
-    setSize (600, 600);
+    setSize (1200, 800);
     
     Cartridge cart = loadNESFile(File("/Users/sj4-hunt/Documents/roms/3538 NES ROMs/Europe/Super Mario Bros (E).nes"));
     //   Cartridge cart = loadNESFile(File("/Users/sj4-hunt/Downloads/3538 NES ROMs/Europe/Super Mario Bros (E).nes"));
@@ -25,6 +25,9 @@ MainComponent::MainComponent() : Thread("nes"), NES(f) {
     NES.cpu.init();
     NES.cpu.Reset();
     NES.cartridge = cart;
+    
+    NES.ppu.memory.makePallette();
+
     startThread(2);
     
     addKeyListener(this);
@@ -45,6 +48,8 @@ MainComponent::MainComponent() : Thread("nes"), NES(f) {
     addAndMakeVisible(speedSlider);
     speedSlider.setRange(1.0, 400.0);
     speedSlider.setValue(100);
+    
+    startTimer(1000);
 }
 
 MainComponent::~MainComponent()
@@ -64,6 +69,83 @@ void MainComponent::paint (Graphics& g)
     //NES.ppu.nameTableData
     
     //    g.drawImage(img, 0, 0, img.getWidth() * 2, img.getHeight() * 2, 0, 0, img.getWidth(), img.getHeight());
+    
+    //going to draw the pattern table
+    
+    
+    g.setColour(Colours::red);
+    g.drawLine(512, 0, 512, getHeight());
+    std::cout << "repainted \n";
+    
+#if 0
+    {
+    float xPos = 530;
+    float yPos = 10;
+    
+    Image img(Image::PixelFormat::RGB, 8, 8, false);
+    static const int cMap[4] = {0, 40, 70, 255};
+    for (int i = 0; i < NES.ppu.memory.patterns.size(); i++) {
+        PatternTable pTable = NES.ppu.memory.patterns[i];
+        
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
+                img.setPixelAt(x, y, Colour::greyLevel(cMap[pTable.data[x][y]] / 255.0));
+                g.drawImage(img, xPos, yPos, 16, 16, 0, 0, 8, 8);
+                
+            }
+        }
+        xPos += 18;
+        if (xPos+18 >= getWidth()) {
+            xPos = 530;
+            yPos += 18;
+        }
+        
+    }
+    }
+#endif
+    
+    
+    {
+        float yPos = 10;
+        
+        Image img(Image::PixelFormat::RGB, 8, 8, false);
+//        static const int cMap[4] = {0, 40, 70, 255};
+        static const int cMap[4] = {0, 40, 70, 255};
+        g.setColour(Colours::black);
+        g.setFont(8);
+        for (int row = 0; row < 32; row++) {
+            float xPos = 530;
+
+            for (int col = 0; col < 30 ; col++) {
+//                const int nTableAddress = (0x2000+ row + (col+32));
+                const int nTableAddress = (0x2000 + col + (row*32));
+
+                const int index = NES.ppu.memory.read(nTableAddress);
+                
+//                g.drawText(String(index), xPos, yPos, 16, 16, Justification::centred);
+                
+                PatternTable pTable = NES.ppu.memory.patterns[index*16];
+                for (int x = 0; x < 8; x++) {
+                    for (int y = 0; y < 8; y++) {
+                        img.setPixelAt(x, y, Colour::greyLevel(cMap[pTable.data[x][y]] / 255.0));
+                        g.drawImage(img, xPos, yPos, 16, 16, 0, 0, 8, 8);
+                        
+                    }
+                }
+                
+//                xPos += 18;
+//                if (xPos+18 >= getWidth()) {
+//                    xPos = 530;
+//                    yPos += 18;
+//                }
+                xPos +=18;
+            }
+            yPos += 18;
+        }
+
+    }
+    
+    
     
 }
 
@@ -191,4 +273,9 @@ bool MainComponent::keyStateChanged (bool isKeyDown, Component* originatingCompo
     }
     
     return true;
+}
+
+void MainComponent::timerCallback()
+{
+    repaint();
 }

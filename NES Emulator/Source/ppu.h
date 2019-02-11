@@ -29,33 +29,14 @@ public:
         Byte access[4]; //allows quick access during oam read/write
     };
     struct VRamAddress {
-//        struct {
-//            Byte xCoarseScroll : 5;
-//            Byte yCoarseScroll : 5;
-//            Byte nameTableSelect : 2;
-//            Byte yFineScroll : 4;
-////            Byte unused : 1; //top bit is unused
-//
-//        };
-//        UInt16 rawData;
-#if 1
+        
         Byte xCoarseScroll : 5;
         Byte yCoarseScroll : 5;
         Byte nameTableSelect : 2;
         Byte yFineScroll : 3;
-
-//        Byte xCoarseScroll;//
-//        Byte yCoarseScroll;
-//        Byte nameTableSelect;
-//        Byte yFineScroll;
         
         uint16 getRaw ()
         {
-//            uint16 toGoBack = xCoarseScroll;
-//            toGoBack |= (yCoarseScroll << 5);
-//            toGoBack |= (nameTableSelect << 10);
-//            toGoBack |= (yFineScroll << 12);
-//            return toGoBack;
             return xCoarseScroll | (yCoarseScroll << 5) | (nameTableSelect << 10) | (yFineScroll << 12);
         }
         void setRaw (uint16 raw)
@@ -65,17 +46,6 @@ public:
             nameTableSelect = (raw >> 10) & 0x3;
             yFineScroll = (raw >> 12) & 0x7;
         }
-#else
-        uint16 getRaw ()
-        {
-            return data;
-        }
-        void setRaw (uint16 raw)
-        {
-            data = raw;
-        }
-        uint16 data = 0;
-#endif
         
     };
     enum eConsants {
@@ -83,6 +53,7 @@ public:
         eNumOfScanLines = 262,
         ePaletteSize = 32,
         eNameTableSize = 2048,
+        ePixelMaskLeft = 8,
     };
     enum eRegisters {
         eControl = 0x2000,
@@ -214,6 +185,13 @@ public:
 
     NesColour   front[pixelWidth][pixelHeight];
     NesColour   back[pixelWidth][pixelHeight];
+    
+    struct FullScreenDebug { //warpped up like
+        NesColour   fullMapRender[pixelWidth*2][pixelHeight*2];
+    };
+    
+    void fillDebugScreenBuffer (FullScreenDebug * buffer);
+    
 
 //	front         *image.RGBA
 //	back          *image.RGBA
@@ -222,7 +200,7 @@ public:
 	VRamAddress vramAddress; // current vram address (15 bit)
 	VRamAddress tempAddress; // temporary vram address (15 bit)
 	Byte x;   // fine x scroll (3 bit)
-	Byte w;   // write toggle (1 bit)
+	Byte writeToggle;   // write toggle (1 bit)
 	Byte f;   // even/odd frame flag (1 bit)
     
 	Byte _register;
@@ -257,7 +235,7 @@ public:
     
 	// $2001 PPUMASK
 	Byte flagGrayscale; // 0: color; 1: grayscale
-	Byte flagShowLeftBackground; // 0: hide; 1: show
+	Byte flagShowLeftBackground; // 0: hide; 1: show - hides the left 8 pixels
 	Byte flagShowLeftSprites; // 0: hide; 1: show
 	Byte flagShowBackground; // 0: hide; 1: show
 	Byte flagShowSprites; // 0: hide; 1: show
