@@ -111,7 +111,7 @@ public:
                 for (int x = 0; x < 8; x++) {
                     int a = checkBit(rowA, x);
                     int b = checkBit(rowB, x);
-                    pTable.data[x][y] = a+(b<<1);
+                    pTable.data[7-x][y] = a+(b<<1);
                 }
                 index++;
             }

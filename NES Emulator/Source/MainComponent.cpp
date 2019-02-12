@@ -75,7 +75,7 @@ void MainComponent::paint (Graphics& g)
     
     g.setColour(Colours::red);
     g.drawLine(512, 0, 512, getHeight());
-    std::cout << "repainted \n";
+//    std::cout << "repainted \n";
     
 #if 0
     {
@@ -102,7 +102,7 @@ void MainComponent::paint (Graphics& g)
         
     }
     }
-#endif
+#else
     
     
     {
@@ -118,13 +118,26 @@ void MainComponent::paint (Graphics& g)
 
             for (int col = 0; col < 30 ; col++) {
 //                const int nTableAddress = (0x2000+ row + (col+32));
+                
+#if 1
                 const int nTableAddress = (0x2000 + col + (row*32));
 
                 const int index = NES.ppu.memory.read(nTableAddress);
+//                PatternTable pTable = NES.ppu.memory.patterns[index*16];
+                PatternTable pTable = NES.ppu.memory.patterns[0x1000+index];
+#else
+                
+                const int nTableAddress = (0x2000 + col + (row*32));
+                
+                const Byte index = NES.ppu.memory.read(nTableAddress);
+                const uint16 address = NES.ppu.getAddressOffset(index);
+                PatternTable pTable = NES.ppu.memory.patterns[address];
+                
+#endif
                 
 //                g.drawText(String(index), xPos, yPos, 16, 16, Justification::centred);
                 
-                PatternTable pTable = NES.ppu.memory.patterns[index*16];
+
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 8; y++) {
                         img.setPixelAt(x, y, Colour::greyLevel(cMap[pTable.data[x][y]] / 255.0));
@@ -144,6 +157,7 @@ void MainComponent::paint (Graphics& g)
         }
 
     }
+#endif
     
     
     
@@ -271,11 +285,21 @@ bool MainComponent::keyStateChanged (bool isKeyDown, Component* originatingCompo
         buttons[ButtonB] = 0;
         
     }
+    if (KeyPress::isKeyCurrentlyDown(67)) {
+        repaint();
+        
+    }
+    
     
     return true;
 }
 
 void MainComponent::timerCallback()
 {
-    repaint();
+//    repaint();
+}
+
+void MainComponent::sliderValueChanged (Slider* slider)
+{
+    
 }

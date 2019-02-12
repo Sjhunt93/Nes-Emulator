@@ -68,7 +68,7 @@ PPU::PPU (Console * _console) : memory(_console)
     
 //    vramAddress = tempAddress = {0,0,0,0};
     
-    x = writeToggle = f = 0;
+    xFineScroll = writeToggle = f = 0;
     _register = 0;
 
     nmiOccurred = nmiOutput = nmiPrevious = nmiDelay = 0;
@@ -269,7 +269,7 @@ void PPU::writeScroll(Byte value) {
         // x:               CBA = d: .....CBA
         // w:                   = 1
         tempAddress.setRaw((tempAddress.getRaw() & 0xFFE0) | (value16 >> 3));
-        x = value & 0x07;
+        xFineScroll = value & 0x07;
         writeToggle = 1;
     } else {
         // t: .CBA..HG FED..... = d: HGFEDCBA
@@ -465,9 +465,18 @@ void PPU::fetchAttributeTableByte() {
     attributeTableByte = ((memory.read(address) >> shift) & 3) << 2;
 }
 void PPU::fetchLowTileByte() {
-    UInt16 fineY = vramAddress.yFineScroll;
+    UInt16 fineY = vramAddress.yFineScroll; //fine y is used to get each line as we are fetching the tile....
     UInt16 table = flagBackgroundTable;
     UInt16 tile = nameTableByte; //unsure on why we multiply the tile by 16...
+    
+    /*
+     name table byte gives us x-y
+     
+     the  we have a y fine scroll for each line
+     finally *16 to jump over the next block.
+     
+     
+     */
     UInt16 address = (0x1000 * table) + tile * 16 + fineY;
     lowTileByte = memory.read(address);
 }
@@ -510,7 +519,7 @@ Byte PPU::backgroundPixel() {
     if (flagShowBackground == 0) {
         return 0;
     }
-    Byte data = fetchTileData() >> ((7 - x) * 4);
+    Byte data = fetchTileData() >> ((7 - xFineScroll) * 4);
     return data & 0x0F;
 }
 
@@ -811,4 +820,13 @@ void PPU::fillDebugScreenBuffer (PPU::FullScreenDebug * buffer)
 
         }
     }
+}
+
+uint16 PPU::getAddressOffset (Byte nameTable)
+{
+    UInt16 fineY = vramAddress.yFineScroll;
+    UInt16 table = flagBackgroundTable;
+    UInt16 tile = nameTable; //unsure on why we multiply the tile by 16...
+    UInt16 address = (0x1000 * table) + tile * 16 + fineY;
+    return address;
 }

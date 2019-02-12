@@ -191,7 +191,7 @@ public:
     };
     
     void fillDebugScreenBuffer (FullScreenDebug * buffer);
-    
+    uint16 getAddressOffset (Byte nameTable);
 
 //	front         *image.RGBA
 //	back          *image.RGBA
@@ -199,7 +199,7 @@ public:
 	// PPU registers
 	VRamAddress vramAddress; // current vram address (15 bit)
 	VRamAddress tempAddress; // temporary vram address (15 bit)
-	Byte x;   // fine x scroll (3 bit)
+	Byte xFineScroll;   // fine x scroll (3 bit)
 	Byte writeToggle;   // write toggle (1 bit)
 	Byte f;   // even/odd frame flag (1 bit)
     

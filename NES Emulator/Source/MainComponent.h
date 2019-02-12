@@ -29,7 +29,7 @@ class NameTableView : public Component
     }
 };
 
-class MainComponent   : public Component, public Thread, public KeyListener, public Timer
+class MainComponent   : public Component, public Thread, public KeyListener, public Timer, public Slider::Listener
 {
 public:
     //==============================================================================
@@ -49,11 +49,14 @@ public:
     
     void timerCallback();
 
+    void sliderValueChanged (Slider* slider);
+
     
     File f;
     Console NES;
     bool buttons[8];
     Slider speedSlider;
+//    Slider xScroll,
 private:
     ScreenComponent screen;
     //==============================================================================
