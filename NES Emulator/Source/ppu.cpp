@@ -449,10 +449,12 @@ void PPU::clearVerticalBlank() {
     nmiChange();
 }
 
+static int lastAddressRead = 0;
 void PPU::fetchNameTableByte() {
     //bottom 12 bits
     const UInt16 address = 0x2000 | (vramAddress.getRaw() & 0x0FFF);
     nameTableByte = memory.read(address);
+    lastAddressRead = address;
 }
 
 void PPU::fetchAttributeTableByte() {
@@ -479,6 +481,10 @@ void PPU::fetchLowTileByte() {
      */
     UInt16 address = (0x1000 * table) + tile * 16 + fineY;
     lowTileByte = memory.read(address);
+    
+    if (lastAddressRead == 0x2000 && fineY == 0) {
+        int a = 5;
+    }
 }
 
 void PPU::fetchHighTileByte() {

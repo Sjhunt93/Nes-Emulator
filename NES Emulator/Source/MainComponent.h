@@ -56,7 +56,7 @@ public:
     Console NES;
     bool buttons[8];
     Slider speedSlider;
-//    Slider xScroll,
+    Slider xScroll;
 private:
     ScreenComponent screen;
     //==============================================================================

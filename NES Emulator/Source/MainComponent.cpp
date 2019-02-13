@@ -13,7 +13,7 @@
 
 
 MainComponent::MainComponent() : Thread("nes"), NES(f) {
-    setSize (1200, 800);
+    setSize (1600, 800);
     
     Cartridge cart = loadNESFile(File("/Users/sj4-hunt/Documents/roms/3538 NES ROMs/Europe/Super Mario Bros (E).nes"));
     //   Cartridge cart = loadNESFile(File("/Users/sj4-hunt/Downloads/3538 NES ROMs/Europe/Super Mario Bros (E).nes"));
@@ -46,8 +46,11 @@ MainComponent::MainComponent() : Thread("nes"), NES(f) {
     //    aft = aft.rotated(3.14);
     //    screen.setTransform(aft);
     addAndMakeVisible(speedSlider);
+    addAndMakeVisible(xScroll);
     speedSlider.setRange(1.0, 400.0);
     speedSlider.setValue(100);
+ 
+    xScroll.setRange(-32, 32, 1);
     
     startTimer(1000);
 }
@@ -107,24 +110,35 @@ void MainComponent::paint (Graphics& g)
     
     {
         float yPos = 10;
-        
+        const int size = 16;
+
         Image img(Image::PixelFormat::RGB, 8, 8, false);
 //        static const int cMap[4] = {0, 40, 70, 255};
         static const int cMap[4] = {0, 40, 70, 255};
         g.setColour(Colours::black);
         g.setFont(8);
-        for (int row = 0; row < 32; row++) {
+        int counter = 0;
+        for (int row = 0; row < 30; row++) {
             float xPos = 530;
 
-            for (int col = 0; col < 30 ; col++) {
+            for (int col = 0; col < 64; col++) {
 //                const int nTableAddress = (0x2000+ row + (col+32));
                 
 #if 1
-                const int nTableAddress = (0x2000 + col + (row*32));
+//                const int nTableAddress = (0x2000    + col + (row*32));
+
+                const int nTableAddress = ((col < 32 ? 0x2000 : 0x2400)    + col + (row*32));
+                
+                counter++;
 
                 const int index = NES.ppu.memory.read(nTableAddress);
 //                PatternTable pTable = NES.ppu.memory.patterns[index*16];
-                PatternTable pTable = NES.ppu.memory.patterns[0x1000+index];
+//                jassert(0xFF+index <NES.ppu.memory.patterns.size() );
+//                const int actualAddress = 0x1000 + index * 16;
+                const int actualAddress = 0x1000 + index * 16;
+                const int mappedAddress = 256 + index;
+//                PatternTable pTable = NES.ppu.memory.patterns[mappedAddress+xScroll.getValue()];
+                PatternTable pTable = NES.ppu.memory.tableForAddressBase(actualAddress);
 #else
                 
                 const int nTableAddress = (0x2000 + col + (row*32));
@@ -137,23 +151,17 @@ void MainComponent::paint (Graphics& g)
                 
 //                g.drawText(String(index), xPos, yPos, 16, 16, Justification::centred);
                 
-
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 8; y++) {
                         img.setPixelAt(x, y, Colour::greyLevel(cMap[pTable.data[x][y]] / 255.0));
-                        g.drawImage(img, xPos, yPos, 16, 16, 0, 0, 8, 8);
+                        g.drawImage(img, xPos, yPos, size , size , 0, 0, 8, 8);
                         
                     }
                 }
-                
-//                xPos += 18;
-//                if (xPos+18 >= getWidth()) {
-//                    xPos = 530;
-//                    yPos += 18;
-//                }
-                xPos +=18;
+    
+                xPos += size + 1;
             }
-            yPos += 18;
+            yPos += size + 1;
         }
 
     }
@@ -170,7 +178,8 @@ void MainComponent::resized()
     // update their positions.
     
     screen.setBounds(0, 0, pixelWidth * 2, pixelHeight*2);
-    speedSlider.setBounds(0, screen.getHeight() + 10, 100, 30);
+    speedSlider.setBounds(0, screen.getHeight() + 10, 300, 30);
+    xScroll.setBounds(0, speedSlider.getY() + 40, speedSlider.getWidth(), speedSlider.getHeight());
 }
 
 //void MainComponent::update()

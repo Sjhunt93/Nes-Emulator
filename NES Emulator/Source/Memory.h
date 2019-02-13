@@ -119,6 +119,24 @@ public:
         }
     }
     
+    PatternTable tableForAddressBase (UInt16 address)
+    {
+        PatternTable pTable;
+        
+        int index = address;
+        for (int y = 0; y < 8; y++) {
+            Byte rowA = read(index);
+            Byte rowB = read(index+8);
+            for (int x = 0; x < 8; x++) {
+                int a = checkBit(rowA, x);
+                int b = checkBit(rowB, x);
+                pTable.data[7-x][y] = a+(b<<1);
+            }
+            index++;
+        }
+        return pTable;
+    }
+    
     std::vector<PatternTable> patterns;
 
     
