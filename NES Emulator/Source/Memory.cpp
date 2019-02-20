@@ -155,3 +155,40 @@ void ppuMemory::write (UInt16 address, Byte data)
     
     
 }
+
+
+Byte ppuMemory::attributeByteForXY (const Byte x, const Byte y)
+{
+    /*
+     pretend that the
+     */
+    
+    //64 * 60
+    //16 * 15
+//    const uint16 address = (x/4) + (y*16);
+    Byte toReturn = 0;
+    if (x < 32) {
+        if (y < 30) {
+            toReturn = read(0x23C0+(x/4) + (y*16));
+        }
+        else {
+            toReturn = read(0x2BC0+(x/4) + ((y-30)*16));
+        }
+    }
+    else {
+        if (y < 30) {
+            toReturn = read(0x27C0+((x-32)/4) + (y*16));
+        }
+        else {
+            toReturn = read(0x2FC0+((x-32)/4) + ((y-30)*16));
+        }
+    }
+    int xP = (x % 4) / 2;
+    int yP = (y % 4) / 2;
+    if (yP == 0) {
+        return ((xP == 0) ? toReturn : toReturn >> 2) & 0x3;
+    }
+    else {
+        return ((xP == 0) ? toReturn >> 4 : toReturn >> 6) & 0x3;
+    }
+}

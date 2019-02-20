@@ -125,6 +125,7 @@ Byte PPU::readPalette(UInt16 address)  {
     if (address >= 16 && (address%4) == 0) {
         address -= 16;
     }
+    jassert(address < 32);
     return paletteData[address];
 }
 
@@ -461,10 +462,19 @@ void PPU::fetchAttributeTableByte() {
     // I have no idea what is going in here...
     UInt16 localV = vramAddress.getRaw();
     UInt16 address = 0x23C0;
+    bool flag = false;
+    if (address == 0x23C0) {
+        flag = true;
+    }
     address |= (localV & 0x0C00) | ((localV >> 4) & 0x38);
     address |= vramAddress.xCoarseScroll >> 2; // top 3 bits of xcoarse scroll
     UInt16 shift = ((localV >> 4) & 4) | (localV & 2);
+
+    if (address == 0x23C0 && flag) {
+        flag = false;
+    }
     attributeTableByte = ((memory.read(address) >> shift) & 3) << 2;
+    
 }
 void PPU::fetchLowTileByte() {
     UInt16 fineY = vramAddress.yFineScroll; //fine y is used to get each line as we are fetching the tile....
@@ -482,9 +492,6 @@ void PPU::fetchLowTileByte() {
     UInt16 address = (0x1000 * table) + tile * 16 + fineY;
     lowTileByte = memory.read(address);
     
-    if (lastAddressRead == 0x2000 && fineY == 0) {
-        int a = 5;
-    }
 }
 
 void PPU::fetchHighTileByte() {

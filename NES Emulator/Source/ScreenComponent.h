@@ -64,7 +64,7 @@ public:
         //const float desktopScale = (float) openGLContext.getRenderingScale();
         //glViewport (0, 0, roundToInt (desktopScale * getWidth()), roundToInt (desktopScale * getHeight()));
 
-        
+        glMatrixMode(GL_MODELVIEW);
         if (ppu != nullptr) {
 //            for (int i = 0; i < pixelWidth; i++) {
 //                for (int j = 0; j < pixelHeight; j++) {
@@ -91,6 +91,7 @@ public:
             
             glPixelZoom (4.0, 4.0);
             
+
 //            glDrawPixels(pixelHeight, pixelWidth, GL_RGBA, GL_UNSIGNED_BYTE, ppu->front);
             glDrawPixels(pixelWidth, pixelHeight, GL_RGBA, GL_UNSIGNED_BYTE, bufferToRender);
         }

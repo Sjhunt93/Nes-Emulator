@@ -17,6 +17,7 @@
 		384E69FA950F94803D499061 /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F90E82200A0BA5ECEE8325EB /* CoreMIDI.framework */; };
 		459B90C2BC7427840B053FFF /* include_juce_cryptography.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9DE19C7052EBEEB01418256F /* include_juce_cryptography.mm */; };
 		463B1C33285DBCE68D65C77C /* include_juce_opengl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6DFAB8030643EFDD2B07DF4F /* include_juce_opengl.mm */; };
+		47A5238C221E170C00939091 /* Pulse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 47A5238A221E170C00939091 /* Pulse.cpp */; };
 		47FF1045220CB99400D98940 /* controller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 47FF1032220CB99300D98940 /* controller.cpp */; };
 		47FF1046220CB99400D98940 /* Memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 47FF1036220CB99300D98940 /* Memory.cpp */; };
 		47FF1047220CB99400D98940 /* apu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 47FF1039220CB99300D98940 /* apu.cpp */; };
@@ -57,6 +58,8 @@
 		3C1807CD169CD969CEEF7181 /* NES Emulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NES Emulator.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4162CC162FDCB6B9429F6B0E /* include_juce_audio_processors.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_processors.mm; path = ../../JuceLibraryCode/include_juce_audio_processors.mm; sourceTree = SOURCE_ROOT; };
 		4630FC5055F8BBA7C98E9B90 /* juce_audio_formats */ = {isa = PBXFileReference; lastKnownFileType = text; name = juce_audio_formats; path = "~/JUCE/modules/juce_audio_formats"; sourceTree = "<absolute>"; };
+		47A5238A221E170C00939091 /* Pulse.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Pulse.cpp; path = ../../Source/Pulse.cpp; sourceTree = "<group>"; };
+		47A5238B221E170C00939091 /* Pulse.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = Pulse.hpp; path = ../../Source/Pulse.hpp; sourceTree = "<group>"; };
 		47FF1032220CB99300D98940 /* controller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = controller.cpp; path = ../../Source/controller.cpp; sourceTree = "<group>"; };
 		47FF1033220CB99300D98940 /* controller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = controller.h; path = ../../Source/controller.h; sourceTree = "<group>"; };
 		47FF1034220CB99300D98940 /* apu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = apu.h; path = ../../Source/apu.h; sourceTree = "<group>"; };
@@ -196,6 +199,8 @@
 				8BD31DFF1503875A766FDA1B /* Main.cpp */,
 				47FF1039220CB99300D98940 /* apu.cpp */,
 				47FF1034220CB99300D98940 /* apu.h */,
+				47A5238A221E170C00939091 /* Pulse.cpp */,
+				47A5238B221E170C00939091 /* Pulse.hpp */,
 				47FF1038220CB99300D98940 /* cartridge.h */,
 				47FF103A220CB99300D98940 /* console.h */,
 				47FF1032220CB99300D98940 /* controller.cpp */,
@@ -370,6 +375,7 @@
 				D576B01876FFEDD4D7B2843A /* include_juce_gui_basics.mm in Sources */,
 				07FB2E52EA72823CA9C97383 /* include_juce_gui_extra.mm in Sources */,
 				463B1C33285DBCE68D65C77C /* include_juce_opengl.mm in Sources */,
+				47A5238C221E170C00939091 /* Pulse.cpp in Sources */,
 				16D345020FDBEEABD8360AB9 /* include_juce_video.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

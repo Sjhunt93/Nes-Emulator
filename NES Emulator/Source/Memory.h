@@ -10,6 +10,7 @@
 #define NES_Emulator_Go_Port_memory_h
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include <map>
 
 
 
@@ -93,6 +94,8 @@ public:
     
     Byte read (UInt16 address);
     void write (UInt16 address, Byte data);
+    Byte attributeByteForXY (const Byte x, const Byte y);
+    
     
     static bool checkBit (Byte input, Byte bit)
     {
@@ -121,6 +124,13 @@ public:
     
     PatternTable tableForAddressBase (UInt16 address)
     {
+        
+        auto iterator = tiles.find(address);
+        if (iterator != tiles.end()) {
+            return tiles.at(address);
+        }
+        else {
+        
         PatternTable pTable;
         
         int index = address;
@@ -134,7 +144,9 @@ public:
             }
             index++;
         }
+            tiles.insert(std::make_pair(address, pTable)); //cashing up each img.
         return pTable;
+        }
     }
     
     std::vector<PatternTable> patterns;
@@ -142,6 +154,7 @@ public:
     
 private:
     Console * console;
+    std::map<UInt16, PatternTable> tiles;
 };
         
 #endif

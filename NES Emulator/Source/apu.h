@@ -12,73 +12,175 @@
 
 //const frameCounterRate = CPUFrequency / 240.0
 
+Byte lengthTable[] = {
+    10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
+    12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30,
+};
 
-class apu {
+Byte dutyTable[4][8] = {
+    {0, 1, 0, 0, 0, 0, 0, 0},
+    {0, 1, 1, 0, 0, 0, 0, 0},
+    {0, 1, 1, 1, 1, 0, 0, 0},
+    {1, 0, 0, 1, 1, 1, 1, 1},
+};
+
+Byte triangleTable[] = {
+    15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+};
+
+UInt16 noiseTable[] = {
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
+};
+
+Byte dmcTable[] = {
+    214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27,
+};
+
+
+
+
+
+class APU {
 public:
+    
+    
+//    console     *Console
+//    channel     chan float32
+//    float64 sampleRate;
+//    pulse1      Pulse
+//    pulse2      Pulse
+//    triangle    Triangle
+//    noise       Noise
+//    dmc         DMC
+//    cycle       uint64
+//    framePeriod byte
+//    frameValue  byte
+//    frameIRQ    bool
+//    filterChain FilterChain
+    
+    float pulseTable[31];
+    float tndTable[203];
+    
+    
+    
+    
+    APU ()
+    {
+        for (int i = 0; i < 31; i++) {
+            pulseTable[i] = 95.52 / (8128.0/(float)(i) + 100);
+        }
+        for (int i = 0; i < 203; i++) {
+            tndTable[i] = 163.67 / (24329.0/(float)(i) + 100);
+        }
+    }
     
 };
 
+
+
+
+class DMC {
+    //    cpu            *CPU
+    bool enabled;
+    Byte value;
+    UInt16 sampleAddress;
+    UInt16 sampleLength;
+    UInt16 currentAddress;
+    UInt16 currentLength;
+    Byte shiftRegister;
+    Byte bitCount;
+    Byte tickPeriod;
+    Byte tickValue;
+    bool loop;
+    bool irq;
+    
+    
+    
+    
+    void writeControl(Byte _value) {
+        irq = (_value&0x80) == 0x80;
+        loop = (_value&0x40) == 0x40;
+        tickPeriod = dmcTable[_value&0x0F];
+    }
+    void writeValue(Byte _value) {
+        value = _value & 0x7F;
+    }
+    void writeAddress(Byte _value) {
+        // Sample address = %11AAAAAA.AA000000
+        sampleAddress = 0xC000 | (UInt16(_value) << 6);
+    }
+    void writeLength(Byte value ) {
+        // Sample length = %0000LLLL.LLLL0001
+        sampleLength = (UInt16(value) << 4) | 1;
+    }
+    void restart() {
+        currentAddress = sampleAddress;
+        currentLength = sampleLength;
+    }
+    void stepTimer() {
+        if (!enabled) {
+            return;
+        }
+        stepReader();
+        if (tickValue == 0) {
+            tickValue = tickPeriod;
+            stepShifter();
+        } else {
+            tickValue--;
+        }
+    }
+    
+    
+    void stepReader() {
+        if (currentLength > 0 && bitCount == 0) {
+#warning SORT THIS OUT
+            //            cpu.stall += 4
+            //            shiftRegister = d.cpu.Read(d.currentAddress)
+            bitCount = 8;
+            currentAddress++;
+            if (currentAddress == 0) {
+                currentAddress = 0x8000;
+            }
+            currentLength--;
+            if (currentLength == 0 && loop) {
+                restart();
+            }
+        }
+    }
+    
+    void stepShifter() {
+        if (bitCount == 0) {
+            return;
+        }
+        if ((shiftRegister&1) == 1) {
+            if (value <= 125) {
+                value += 2;
+            }
+        }
+        else {
+            if (value >= 2) {
+                value -= 2;
+            }
+        }
+        shiftRegister >>= 1;
+        bitCount--;
+    }
+    
+    Byte output()  {
+        return value;
+    }
+    
+};
+
+
+
+
+
 #if 0
-
-package nes
-
-import "encoding/gob"
-
-
-var lengthTable = []byte{
-	10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
-	12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30,
-}
-
-var dutyTable = [][]byte{
-	{0, 1, 0, 0, 0, 0, 0, 0},
-	{0, 1, 1, 0, 0, 0, 0, 0},
-	{0, 1, 1, 1, 1, 0, 0, 0},
-	{1, 0, 0, 1, 1, 1, 1, 1},
-}
-
-var triangleTable = []byte{
-	15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-}
-
-var noiseTable = []uint16{
-	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
-}
-
-var dmcTable = []byte{
-	214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27,
-}
-
-var pulseTable [31]float32
-var tndTable [203]float32
-
-func init() {
-	for i := 0; i < 31; i++ {
-		pulseTable[i] = 95.52 / (8128.0/float32(i) + 100)
-	}
-	for i := 0; i < 203; i++ {
-		tndTable[i] = 163.67 / (24329.0/float32(i) + 100)
-	}
-}
 
 // APU
 
-type APU struct {
-	console     *Console
-	channel     chan float32
-	sampleRate  float64
-	pulse1      Pulse
-	pulse2      Pulse
-	triangle    Triangle
-	noise       Noise
-	dmc         DMC
-	cycle       uint64
-	framePeriod byte
-	frameValue  byte
-	frameIRQ    bool
-	filterChain FilterChain
-}
 
 func NewAPU(console *Console) *APU {
 	apu := APU{}
@@ -339,194 +441,7 @@ func (apu *APU) writeFrameCounter(value byte) {
 	}
 }
 
-// Pulse
 
-type Pulse struct {
-	enabled         bool
-	channel         byte
-	lengthEnabled   bool
-	lengthValue     byte
-	timerPeriod     uint16
-	timerValue      uint16
-	dutyMode        byte
-	dutyValue       byte
-	sweepReload     bool
-	sweepEnabled    bool
-	sweepNegate     bool
-	sweepShift      byte
-	sweepPeriod     byte
-	sweepValue      byte
-	envelopeEnabled bool
-	envelopeLoop    bool
-	envelopeStart   bool
-	envelopePeriod  byte
-	envelopeValue   byte
-	envelopeVolume  byte
-	constantVolume  byte
-}
-
-func (p *Pulse) Save(encoder *gob.Encoder) error {
-	encoder.Encode(p.enabled)
-	encoder.Encode(p.channel)
-	encoder.Encode(p.lengthEnabled)
-	encoder.Encode(p.lengthValue)
-	encoder.Encode(p.timerPeriod)
-	encoder.Encode(p.timerValue)
-	encoder.Encode(p.dutyMode)
-	encoder.Encode(p.dutyValue)
-	encoder.Encode(p.sweepReload)
-	encoder.Encode(p.sweepEnabled)
-	encoder.Encode(p.sweepNegate)
-	encoder.Encode(p.sweepShift)
-	encoder.Encode(p.sweepPeriod)
-	encoder.Encode(p.sweepValue)
-	encoder.Encode(p.envelopeEnabled)
-	encoder.Encode(p.envelopeLoop)
-	encoder.Encode(p.envelopeStart)
-	encoder.Encode(p.envelopePeriod)
-	encoder.Encode(p.envelopeValue)
-	encoder.Encode(p.envelopeVolume)
-	encoder.Encode(p.constantVolume)
-	return nil
-}
-
-func (p *Pulse) Load(decoder *gob.Decoder) error {
-	decoder.Decode(&p.enabled)
-	decoder.Decode(&p.channel)
-	decoder.Decode(&p.lengthEnabled)
-	decoder.Decode(&p.lengthValue)
-	decoder.Decode(&p.timerPeriod)
-	decoder.Decode(&p.timerValue)
-	decoder.Decode(&p.dutyMode)
-	decoder.Decode(&p.dutyValue)
-	decoder.Decode(&p.sweepReload)
-	decoder.Decode(&p.sweepEnabled)
-	decoder.Decode(&p.sweepNegate)
-	decoder.Decode(&p.sweepShift)
-	decoder.Decode(&p.sweepPeriod)
-	decoder.Decode(&p.sweepValue)
-	decoder.Decode(&p.envelopeEnabled)
-	decoder.Decode(&p.envelopeLoop)
-	decoder.Decode(&p.envelopeStart)
-	decoder.Decode(&p.envelopePeriod)
-	decoder.Decode(&p.envelopeValue)
-	decoder.Decode(&p.envelopeVolume)
-	decoder.Decode(&p.constantVolume)
-	return nil
-}
-
-func (p *Pulse) writeControl(value byte) {
-	p.dutyMode = (value >> 6) & 3
-	p.lengthEnabled = (value>>5)&1 == 0
-	p.envelopeLoop = (value>>5)&1 == 1
-	p.envelopeEnabled = (value>>4)&1 == 0
-	p.envelopePeriod = value & 15
-	p.constantVolume = value & 15
-	p.envelopeStart = true
-}
-
-func (p *Pulse) writeSweep(value byte) {
-	p.sweepEnabled = (value>>7)&1 == 1
-	p.sweepPeriod = (value>>4)&7 + 1
-	p.sweepNegate = (value>>3)&1 == 1
-	p.sweepShift = value & 7
-	p.sweepReload = true
-}
-
-func (p *Pulse) writeTimerLow(value byte) {
-	p.timerPeriod = (p.timerPeriod & 0xFF00) | uint16(value)
-}
-
-func (p *Pulse) writeTimerHigh(value byte) {
-	p.lengthValue = lengthTable[value>>3]
-	p.timerPeriod = (p.timerPeriod & 0x00FF) | (uint16(value&7) << 8)
-	p.envelopeStart = true
-	p.dutyValue = 0
-}
-
-func (p *Pulse) stepTimer() {
-	if p.timerValue == 0 {
-		p.timerValue = p.timerPeriod
-		p.dutyValue = (p.dutyValue + 1) % 8
-	} else {
-		p.timerValue--
-	}
-}
-
-func (p *Pulse) stepEnvelope() {
-	if p.envelopeStart {
-		p.envelopeVolume = 15
-		p.envelopeValue = p.envelopePeriod
-		p.envelopeStart = false
-	} else if p.envelopeValue > 0 {
-		p.envelopeValue--
-	} else {
-		if p.envelopeVolume > 0 {
-			p.envelopeVolume--
-		} else if p.envelopeLoop {
-			p.envelopeVolume = 15
-		}
-		p.envelopeValue = p.envelopePeriod
-	}
-}
-
-func (p *Pulse) stepSweep() {
-	if p.sweepReload {
-		if p.sweepEnabled && p.sweepValue == 0 {
-			p.sweep()
-		}
-		p.sweepValue = p.sweepPeriod
-		p.sweepReload = false
-	} else if p.sweepValue > 0 {
-		p.sweepValue--
-	} else {
-		if p.sweepEnabled {
-			p.sweep()
-		}
-		p.sweepValue = p.sweepPeriod
-	}
-}
-
-func (p *Pulse) stepLength() {
-	if p.lengthEnabled && p.lengthValue > 0 {
-		p.lengthValue--
-	}
-}
-
-func (p *Pulse) sweep() {
-	delta := p.timerPeriod >> p.sweepShift
-	if p.sweepNegate {
-		p.timerPeriod -= delta
-		if p.channel == 1 {
-			p.timerPeriod--
-		}
-	} else {
-		p.timerPeriod += delta
-	}
-}
-
-func (p *Pulse) output() byte {
-	if !p.enabled {
-		return 0
-	}
-	if p.lengthValue == 0 {
-		return 0
-	}
-	if dutyTable[p.dutyMode][p.dutyValue] == 0 {
-		return 0
-	}
-	if p.timerPeriod < 8 || p.timerPeriod > 0x7FF {
-		return 0
-	}
-	// if !p.sweepNegate && p.timerPeriod+(p.timerPeriod>>p.sweepShift) > 0x7FF {
-	// 	return 0
-	// }
-	if p.envelopeEnabled {
-		return p.envelopeVolume
-	} else {
-		return p.constantVolume
-	}
-}
 
 // Triangle
 
@@ -885,3 +800,4 @@ func (d *DMC) output() byte {
 #endif
 
 #endif /* defined(__NES_Emulator_Go_Port__apu__) */
+

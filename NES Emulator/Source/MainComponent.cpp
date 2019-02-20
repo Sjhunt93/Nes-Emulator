@@ -105,9 +105,9 @@ void MainComponent::paint (Graphics& g)
         
     }
     }
-#else
+#endif
     
-    
+    printf("Address value is : %x \n", NES.ppu.memory.read(0x23C0) );
     {
         float yPos = 10;
         const int size = 16;
@@ -124,49 +124,78 @@ void MainComponent::paint (Graphics& g)
             for (int col = 0; col < 64; col++) {
 //                const int nTableAddress = (0x2000+ row + (col+32));
                 
-#if 1
-//                const int nTableAddress = (0x2000    + col + (row*32));
 
-                const int nTableAddress = ((col < 32 ? 0x2000 : 0x2400)    + col + (row*32));
+//                const int nTableAddress = (0x2000    + col + (row*32));
+                int nTableAddress = ((col < 32 ? 0x2000 : 0x2400) + (col%32) + (row*32));
+                
+#if 0
+                int nTableAddress = 0;
+                if (col < 32) {
+                    int nTableAddress = 0x2000 + col + (row*32);
+                }
+                else {
+                    int nTableAddress = 0x2400 + (col-32) + (row*32);
+                }
+#endif
                 
                 counter++;
 
                 const int index = NES.ppu.memory.read(nTableAddress);
-//                PatternTable pTable = NES.ppu.memory.patterns[index*16];
-//                jassert(0xFF+index <NES.ppu.memory.patterns.size() );
-//                const int actualAddress = 0x1000 + index * 16;
+                
                 const int actualAddress = 0x1000 + index * 16;
                 const int mappedAddress = 256 + index;
 //                PatternTable pTable = NES.ppu.memory.patterns[mappedAddress+xScroll.getValue()];
                 PatternTable pTable = NES.ppu.memory.tableForAddressBase(actualAddress);
-#else
                 
-                const int nTableAddress = (0x2000 + col + (row*32));
+//                const int attributreAddress = ((col < 32 ? 0x23C0 : 0x27C0) + ((col%32) + (row*32))/4);
+                Byte attributeByte = NES.ppu.memory.attributeByteForXY(col,row);
                 
-                const Byte index = NES.ppu.memory.read(nTableAddress);
-                const uint16 address = NES.ppu.getAddressOffset(index);
-                PatternTable pTable = NES.ppu.memory.patterns[address];
-                
-#endif
-                
-//                g.drawText(String(index), xPos, yPos, 16, 16, Justification::centred);
+                /* copy pixel values into imgs*/
                 
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 8; y++) {
-                        img.setPixelAt(x, y, Colour::greyLevel(cMap[pTable.data[x][y]] / 255.0));
-                        g.drawImage(img, xPos, yPos, size , size , 0, 0, 8, 8);
-                        
+                        int c = (pTable.data[x][y] | (attributeByte << 2));// | 0x10;
+//                        const bool b = (c%4) != 0;
+                        if ((c%4) == 0) {
+                            c = 0;
+                        }
+
+                        NesColour color =  Palette[NES.ppu.readPalette(c)];
+//                        img.setPixelAt(x, y, Colour::greyLevel(cMap[pTable.data[x][y]] / 255.0));
+                        img.setPixelAt(x, y, Colour(color.r, color.g, color.b));
                     }
                 }
-    
-                xPos += size + 1;
+                g.drawImage(img, xPos, yPos, size , size , 0, 0, 8, 8);
+                xPos += size;
             }
-            yPos += size + 1;
+            yPos += size;
         }
+        const int xCoarse = NES.ppu.vramAddress.xCoarseScroll;
+        const int xFine = NES.ppu.xFineScroll;
+        const int pos = 530 + (xCoarse * size) + (xFine * 2);
+        g.setColour(Colours::orange.withAlpha(0.7f));
+        
+//        g.drawLine(pos, 0, pos, 200, 4.0);
+    }
+
+
+    
+    {
+        int x = 530;
+        int y = 530;
+        for (int i = 0; i < 32; i++) {
+            NesColour c = Palette[NES.ppu.readPalette(i)];
+            g.setColour(Colour(c.r, c.g, c.b));
+            g.fillRect(x, y, 16, 16);
+            x += 17;
+            if (i == 15) {
+                x = 530;
+                y += 17;
+            }
+        }
+        
 
     }
-#endif
-    
     
     
 }
@@ -305,7 +334,7 @@ bool MainComponent::keyStateChanged (bool isKeyDown, Component* originatingCompo
 
 void MainComponent::timerCallback()
 {
-//    repaint();
+   repaint();
 }
 
 void MainComponent::sliderValueChanged (Slider* slider)
