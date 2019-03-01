@@ -9,10 +9,11 @@
 #define Pulse_hpp
 
 #include "../JuceLibraryCode/JuceHeader.h"
-
+#include "Audio.h"
 // Pulse
 
 class Pulse {
+    public:
     bool   enabled;
     Byte   channel;
     bool   lengthEnabled;
@@ -46,34 +47,9 @@ class Pulse {
     void stepSweep();
     void stepLength();
     void sweep();
+    
+    Byte output();
 };
 
 
-#if 0
-
-
-    
-    func (p *Pulse) output() byte {
-        if !p.enabled {
-            return 0
-        }
-        if p.lengthValue == 0 {
-            return 0
-        }
-        if dutyTable[p.dutyMode][p.dutyValue] == 0 {
-            return 0
-        }
-        if p.timerPeriod < 8 || p.timerPeriod > 0x7FF {
-            return 0
-        }
-        // if !p.sweepNegate && p.timerPeriod+(p.timerPeriod>>p.sweepShift) > 0x7FF {
-        //     return 0
-        // }
-        if p.envelopeEnabled {
-            return p.envelopeVolume
-        } else {
-            return p.constantVolume
-        }
-    }
-#endif
 #endif /* Pulse_hpp */

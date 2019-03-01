@@ -34,8 +34,7 @@ void Pulse::writeTimerLow(Byte value)
 
 void Pulse::writeTimerHigh(Byte value)
 {
-#warning ERROR
-    //    lengthValue = lengthTable[value>>3];
+    lengthValue = lengthTable[value>>3];
     timerPeriod = (timerPeriod & 0x00FF) | (UInt16(value&7) << 8);
     envelopeStart = true;
     dutyValue = 0;
@@ -101,7 +100,7 @@ void Pulse::stepLength() {
 
 
 void Pulse::sweep() {
-    const delta = timerPeriod >> sweepShift;
+    const UInt16 delta = timerPeriod >> sweepShift;
     if (sweepNegate) {
         timerPeriod -= delta;
         if (channel == 1) {
@@ -109,6 +108,31 @@ void Pulse::sweep() {
         }
     } else {
         timerPeriod += delta;
+    }
+}
+
+
+Byte Pulse::output()
+{
+    if (enabled) {
+        return 0;
+    }
+    if (lengthValue == 0) {
+        return 0;
+    }
+    if (dutyTable[dutyMode][dutyValue] == 0) {
+        return 0;
+    }
+    if (timerPeriod < 8 || timerPeriod > 0x7FF) {
+        return 0;
+    }
+    // if !p.sweepNegate && p.timerPeriod+(p.timerPeriod>>p.sweepShift) > 0x7FF {
+    //     return 0
+    // }
+    if (envelopeEnabled) {
+        return envelopeVolume;
+    } else {
+        return constantVolume;
     }
 }
 
