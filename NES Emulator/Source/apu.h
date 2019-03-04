@@ -44,32 +44,17 @@ public:
     
     
     
-    APU (Console * _console)
-    {
-        for (int i = 0; i < 31; i++) {
-            pulseTable[i] = 95.52 / (8128.0/(float)(i) + 100);
-        }
-        for (int i = 0; i < 203; i++) {
-            tndTable[i] = 163.67 / (24329.0/(float)(i) + 100);
-        }
-        
-        console = _console;
-        noise.shiftRegister = 1;
-        pulse1.channel = 1;
-        pulse2.channel = 2;
-#warning SORT THIS OUT
-//        dmc.cpu = console.CPU;
-    }
+    APU (Console * _console);
     
     void Step() {
         const UInt64 cycle1 = cycle;
         cycle++;
         const UInt64 cycle2 = cycle;
-//        stepTimer();
+        stepTimer();
         const int f1 = (int) (((Float64)cycle1) / frameCounterRate);
         const int f2 = (int) (((Float64)cycle2) / frameCounterRate);
         if (f1 != f2) {
-//            stepFrameCounter();
+            stepFrameCounter();
         }
         const int s1 = (int) (((Float64)cycle1) / sampleRate);
         const int s2 = (int) (((Float64)cycle2) / sampleRate);
@@ -174,11 +159,8 @@ public:
         triangle.stepLength();
         noise.stepLength();
     }
-    void fireIRQ() {
-        if (frameIRQ) {
-            //console.CPU.triggerIRQ()
-        }
-    }
+    void fireIRQ();
+    
     Byte readRegister(UInt16 address)  {
         if (address == 0x4015) {
             return readStatus();

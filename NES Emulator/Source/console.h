@@ -15,6 +15,7 @@
 #include "controller.h"
 #include "cartridge.h"
 #include "Mapper.h"
+#include "apu.h"
 
 class Routine
 {
@@ -34,7 +35,7 @@ public:
 class Console : public Routine {
 public:
     
-    Console (File rom) : cpu(this), ppu(this)
+    Console (File rom) : cpu(this), ppu(this), apu(this)
     {
         palletInit();
         
@@ -84,6 +85,7 @@ public:
         for (int i = 0; i < cpuCycles; i++) {
             ///jassertfalse;
 //            console.APU.Step()
+            apu.Step();
         }
         return cpuCycles;
     }
@@ -129,27 +131,29 @@ public:
         controller2.setButtons(buttons);
     }
     void SetAudioChannel (Float32 chan) {
+        apu.channel = chan;
 //        console.APU.channel = channel
- //apu
+
     }
     
-#warning WILL PICK UP THE AUDIO AND STATE STUFF LATER ON!
-    /*
-    func (console *Console) SetAudioSampleRate(sampleRate float64) {
-        if sampleRate != 0 {
+
+    void setAudioSampleRate (Float64 sampleRate)
+    {
+        if (sampleRate != 0) {
             // Convert samples per second to cpu steps per sample
-            console.APU.sampleRate = CPUFrequency / sampleRate
+            apu.sampleRate = CPUFrequency / sampleRate;
             // Initialize filters
-            console.APU.filterChain = FilterChain{
-                HighPassFilter(float32(sampleRate), 90),
-                HighPassFilter(float32(sampleRate), 440),
-                LowPassFilter(float32(sampleRate), 14000),
-            }
+#warning SORT OUT THE FILTERS
+//            console.APU.filterChain = FilterChain{
+//                HighPassFilter(float32(sampleRate), 90),
+//                HighPassFilter(float32(sampleRate), 440),
+//                LowPassFilter(float32(sampleRate), 14000),
+//            }
         } else {
-            console.APU.filterChain = nil
+//            console.APU.filterChain = nil
         }
     }
-     */
+
     
     
     /*
@@ -216,7 +220,7 @@ public:
     Cartridge  cartridge;
     
 
-	//APU         *APU
+    APU             apu;
 
 	Mapper *      mapper;
      

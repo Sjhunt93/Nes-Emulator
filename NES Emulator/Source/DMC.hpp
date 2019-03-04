@@ -64,22 +64,7 @@ public:
     }
     
     
-    void stepReader() {
-        if (currentLength > 0 && bitCount == 0) {
-#warning SORT THIS OUT
-            //            cpu.stall += 4
-            //            shiftRegister = d.cpu.Read(d.currentAddress)
-            bitCount = 8;
-            currentAddress++;
-            if (currentAddress == 0) {
-                currentAddress = 0x8000;
-            }
-            currentLength--;
-            if (currentLength == 0 && loop) {
-                restart();
-            }
-        }
-    }
+    void stepReader();
     
     void stepShifter() {
         if (bitCount == 0) {

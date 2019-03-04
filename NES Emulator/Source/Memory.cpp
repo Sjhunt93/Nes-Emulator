@@ -35,8 +35,7 @@ Byte cpuMemory::read (UInt16 address) {
         return console->ppu.readRegister(address);
     }
     else if (address == 0x4015) {
-        
-        //            return mem.console.APU.readRegister(address)
+        return console->apu.readRegister(address);
     }
     else if (address == 0x4016) {
         return console->controller1.read();
@@ -70,26 +69,21 @@ void cpuMemory::write (UInt16 address, Byte data)
         console->ppu.writeRegister(0x2000+(address%8), data);
     }
     else if (address < 0x4014) {
-        //        mem.console.APU.writeRegister(address, value)
-
+        console->apu.writeRegister(address, data);
     }
     else if (address == 0x4014) {
         console->ppu.writeRegister(address, data);
-
     }
-    
     else if (address == 0x4015) {
-        //        mem.console.APU.writeRegister(address, value)
-
+        console->apu.writeRegister(address, data);
     }
     else if (address == 0x4016) {
         console->controller1.write(data);
         console->controller2.write(data);
     }
     else if (address == 0x4017) {
-//        mem.console.APU.writeRegister(address, value)
+        console->apu.writeRegister(address, data);
     }
-    
     else if (address < 0x6000) {
         // TODO: I/O registers
     }
