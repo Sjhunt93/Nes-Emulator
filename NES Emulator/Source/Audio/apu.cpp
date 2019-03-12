@@ -23,6 +23,7 @@ APU::APU (Console * _console)
     pulse2.channel = 2;
     dmc.cpu = &console->cpu;
     
+    timeL = Time::currentTimeMillis();
 }
 
 

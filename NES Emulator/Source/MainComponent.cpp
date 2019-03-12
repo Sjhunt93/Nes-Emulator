@@ -12,7 +12,9 @@
 #include "Mapper.h"
 
 
-MainComponent::MainComponent() : Thread("nes"), NES(f) {
+MainComponent::MainComponent() : Thread("nes"), NES(f), audioProcessor(&NES)
+{
+    
     setSize (1600, 800);
     
     Cartridge cart = loadNESFile(File("/Users/sj4-hunt/Documents/roms/3538 NES ROMs/Europe/Super Mario Bros (E).nes"));
@@ -53,6 +55,12 @@ MainComponent::MainComponent() : Thread("nes"), NES(f) {
     xScroll.setRange(-32, 32, 1);
     
     startTimer(1000);
+    setAudioChannels(2, 2);
+    AudioDeviceManager::AudioDeviceSetup aws = deviceManager.getAudioDeviceSetup();
+    aws.bufferSize = 64;
+    deviceManager.setAudioDeviceSetup(aws, false);
+
+
 }
 
 MainComponent::~MainComponent()
@@ -107,7 +115,6 @@ void MainComponent::paint (Graphics& g)
     }
 #endif
     
-    printf("Address value is : %x \n", NES.ppu.memory.read(0x23C0) );
     {
         float yPos = 10;
         const int size = 16;
@@ -340,4 +347,19 @@ void MainComponent::timerCallback()
 void MainComponent::sliderValueChanged (Slider* slider)
 {
     
+}
+
+//#define FOWARD(ROOT, CLASS, func  )
+
+void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+{
+    audioProcessor.prepareToPlay(samplesPerBlockExpected, sampleRate);
+}
+void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
+{
+    audioProcessor.getNextAudioBlock(bufferToFill);
+}
+void MainComponent::releaseResources()
+{
+    audioProcessor.releaseResources();
 }

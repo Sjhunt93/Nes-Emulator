@@ -114,9 +114,9 @@ void Pulse::sweep() {
 
 Byte Pulse::output()
 {
-    if (enabled) {
-        return 0;
-    }
+//    if (enabled) {
+//        return 0;
+//    }
     if (lengthValue == 0) {
         return 0;
     }

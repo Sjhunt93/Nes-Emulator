@@ -61,8 +61,7 @@ public:
          console.PPU = NewPPU(&console)
          return &console, nil
          
-         */
-    }
+         */    }
     ~Console()
     {
         delete [] ram;

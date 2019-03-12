@@ -36,17 +36,56 @@ public:
     Byte  framePeriod;
     Byte  frameValue;
     bool  frameIRQ;
-//    FilterChain  filterChain;
+    //    FilterChain  filterChain;
     
     float pulseTable[31];
     float tndTable[203];
     
     
-    
+    int64 timeL;
+    int count = 0;
     
     APU (Console * _console);
     
+    void sampleStep (float sampleRate, float bufferSize, float * samples)
+    {
+        const int toTick = roundf((bufferSize / sampleRate) * 1789773); //cpu speed
+        const float multiAmount = toTick / bufferSize; //we need a buffer size worth of samples
+        int sCount = 0;
+        for (int i = 0; i < toTick; i++) {
+            const UInt64 cycle1 = cycle;
+            cycle++;
+            const UInt64 cycle2 = cycle;
+            stepTimer();
+            const int f1 = (int) (((Float64)cycle1) / frameCounterRate);
+            const int f2 = (int) (((Float64)cycle2) / frameCounterRate);
+            if (f1 != f2) {
+                stepFrameCounter();
+            }
+            const int s1 = (int) (((Float64)cycle1) / sampleRate);
+            const int s2 = (int) (((Float64)cycle2) / sampleRate);
+            
+            
+            /*
+             if (s1 != s2) {
+             samples[sCount] = output();
+             sCount++;
+             jassert(sCount <= bufferSize);
+             }
+             */
+            if (i > (multiAmount * sCount)) { //this should give us exactly the buffer size but also may glitchout...
+                samples[sCount] = output();
+                sCount++;
+                jassert(sCount <= bufferSize);
+            }
+        }
+        //        std::cout << sCount << "\n";
+        
+    }
+    
     void Step() {
+        return;
+        
         const UInt64 cycle1 = cycle;
         cycle++;
         const UInt64 cycle2 = cycle;
@@ -58,31 +97,46 @@ public:
         }
         const int s1 = (int) (((Float64)cycle1) / sampleRate);
         const int s2 = (int) (((Float64)cycle2) / sampleRate);
-
+        
+        
         if (s1 != s2) {
             sendSample();
+            const int64 t = Time::currentTimeMillis();
+            if (t-timeL > 1000) {
+                timeL = t;
+                std::cout << count << "\n";
+                count = 0;
+            }
+            count++;
         }
     }
     void sendSample() {
         /*
-        const float output = apu.filterChain.Step(apu.output())
-        select {
-        case apu.channel <- output:
-        default:
-        }
+         const float output = apu.filterChain.Step(apu.output())
+         select {
+         case apu.channel <- output:
+         default:
+         }
          */
     }
     float output() {
         float p1 = pulse1.output();
+        
         float p2 = pulse2.output();
+        
         float t = triangle.output();
         float n = noise.output();
         float d = dmc.output();
         float pulseOut = pulseTable[(int)(p1+p2)];
+        
         float tndOut = tndTable[(int)(3*t+2*n+d)];
         return pulseOut + tndOut;
-        }
-
+        
+        //3 * triangle + (noise << 1)+ dmc
+        
+        
+    }
+    
     // mode 0:    mode 1:       function
     // ---------  -----------  -----------------------------
     //  - - - f    - - - - -    IRQ (if bit 6 is clear)
@@ -91,46 +145,46 @@ public:
     
     void stepFrameCounter() {
         switch (framePeriod) {
-        case 4:
-            frameValue = (frameValue + 1) % 4;
-            switch (frameValue) {
-                case 0:
-                case 2:
-                    stepEnvelope();
+            case 4:
+                frameValue = (frameValue + 1) % 4;
+                switch (frameValue) {
+                    case 0:
+                    case 2:
+                        stepEnvelope();
+                        break;
+                    case 1:
+                        stepEnvelope();
+                        stepSweep();
+                        stepLength();
+                        break;
+                    case 3:
+                        stepEnvelope();
+                        stepSweep();
+                        stepLength();
+                        fireIRQ();
+                        break;
+                }
                 break;
-            case 1:
-                    stepEnvelope();
-                    stepSweep();
-                    stepLength();
-                    break;
-            case 3:
-                    stepEnvelope();
-                    stepSweep();
-                    stepLength();
-                    fireIRQ();
-                    break;
-            }
-            break;
-        case 5:
-            frameValue = (frameValue + 1) % 5;
-            switch (frameValue) {
-                case 1:
-                case 3:
-                    stepEnvelope();
-                    break;
-                case 0:
-                case 2:
-                    stepEnvelope();
-                    stepSweep();
-                    stepLength();
-                    break;
-            }
+            case 5:
+                frameValue = (frameValue + 1) % 5;
+                switch (frameValue) {
+                    case 1:
+                    case 3:
+                        stepEnvelope();
+                        break;
+                    case 0:
+                    case 2:
+                        stepEnvelope();
+                        stepSweep();
+                        stepLength();
+                        break;
+                }
                 break;
         }
     }
     
     
-
+    
     
     
     void stepTimer() {
@@ -226,77 +280,77 @@ public:
             stepLength();
         }
     }
-
+    
     
     void writeRegister(UInt16 address, Byte value) {
         switch (address) {
-        case 0x4000:
+            case 0x4000:
                 pulse1.writeControl(value);
                 break;
-        case 0x4001:
+            case 0x4001:
                 pulse1.writeSweep(value);
                 break;
-        case 0x4002:
+            case 0x4002:
                 pulse1.writeTimerLow(value);
                 break;
-        case 0x4003:
+            case 0x4003:
                 pulse1.writeTimerHigh(value);
                 break;
-        case 0x4004:
+            case 0x4004:
                 pulse2.writeControl(value);
                 break;
-        case 0x4005:
+            case 0x4005:
                 pulse2.writeSweep(value);
                 break;
-        case 0x4006:
+            case 0x4006:
                 pulse2.writeTimerLow(value);
                 break;
-        case 0x4007:
+            case 0x4007:
                 pulse2.writeTimerHigh(value);
                 break;
-        case 0x4008:
+            case 0x4008:
                 triangle.writeControl(value);
                 break;
-        case 0x4009:
-        case 0x4010:
+            case 0x4009:
+            case 0x4010:
                 dmc.writeControl(value);
                 break;
-        case 0x4011:
+            case 0x4011:
                 dmc.writeValue(value);
                 break;
-        case 0x4012:
+            case 0x4012:
                 dmc.writeAddress(value);
                 break;
-        case 0x4013:
+            case 0x4013:
                 dmc.writeLength(value);
                 break;
-        case 0x400A:
+            case 0x400A:
                 triangle.writeTimerLow(value);
                 break;
-        case 0x400B:
+            case 0x400B:
                 triangle.writeTimerHigh(value);
                 break;
-        case 0x400C:
+            case 0x400C:
                 noise.writeControl(value);
                 break;
-        case 0x400D:
-        case 0x400E:
+            case 0x400D:
+            case 0x400E:
                 noise.writePeriod(value);
                 break;
-        case 0x400F:
+            case 0x400F:
                 noise.writeLength(value);
                 break;
-        case 0x4015:
+            case 0x4015:
                 writeControl(value);
                 break;
-        case 0x4017:
+            case 0x4017:
                 writeFrameCounter(value);
                 break;
-            // default:
-            //     log.Fatalf("unhandled apu register write at address: 0x%04X", address)
+                // default:
+                //     log.Fatalf("unhandled apu register write at address: 0x%04X", address)
         }
     }
-
+    
 };
 
 
